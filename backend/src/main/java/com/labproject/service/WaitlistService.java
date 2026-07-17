@@ -27,6 +27,18 @@ public class WaitlistService {
         Equipment equipment = equipmentRepository.findById(equipmentId)
                 .orElseThrow(() -> new RuntimeException("Equipment not found"));
 
+        if (user.getRole().equals("STUDENT") || user.getRole().equals("RESEARCHER")) {
+            Integer userInstId = user.getInstitution() != null ? user.getInstitution().getId() : 
+                                 (user.getDepartment() != null && user.getDepartment().getInstitution() != null ? 
+                                  user.getDepartment().getInstitution().getId() : null);
+            Integer eqInstId = (equipment.getDepartment() != null && equipment.getDepartment().getInstitution() != null)
+                    ? equipment.getDepartment().getInstitution().getId() : null;
+
+            if (userInstId == null || !userInstId.equals(eqInstId)) {
+                throw new RuntimeException("You can only join waitlists within your own college");
+            }
+        }
+
         Waitlist waitlist = new Waitlist();
         waitlist.setEquipment(equipment);
         waitlist.setUser(user);

@@ -17,27 +17,27 @@ INSERT INTO departments (id, institution_id, name) VALUES
 ON CONFLICT DO NOTHING;
 
 -- Users (password = 'password', pre-hashed with BCrypt)
-INSERT INTO users (id, department_id, name, email, password, role) VALUES
+INSERT INTO users (id, department_id, institution_id, name, email, password, role) VALUES
 -- Global Admin
-(1, 1, 'System Admin', 'admin@system.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'SYSTEM_ADMIN'),
+(1, NULL, 1, 'System Admin', 'admin@system.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'SYSTEM_ADMIN'),
 
 -- MIT (Institution 1)
-(2, 1, 'MIT Student', 'student@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'STUDENT'),
-(3, 1, 'MIT Researcher', 'researcher@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'RESEARCHER'),
-(4, 1, 'MIT Technician', 'tech@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'LAB_TECHNICIAN'),
-(5, 1, 'MIT Manager', 'manager@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'LAB_MANAGER'),
-(6, 1, 'MIT Dept Head', 'depthead@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'DEPARTMENT_HEAD'),
-(7, 1, 'MIT Inst Head', 'head@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'INSTITUTION_HEAD'),
+(2, NULL, 1, 'MIT Student', 'student@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'STUDENT'),
+(3, 1, 1, 'MIT Researcher', 'researcher@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'RESEARCHER'),
+(4, 1, 1, 'MIT Technician', 'tech@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'LAB_TECHNICIAN'),
+(5, 1, 1, 'MIT Manager', 'manager@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'LAB_MANAGER'),
+(6, 1, 1, 'MIT Dept Head', 'depthead@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'DEPARTMENT_HEAD'),
+(7, 1, 1, 'MIT Inst Head', 'head@mit.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'INSTITUTION_HEAD'),
 
 -- Stanford (Institution 2)
-(8, 3, 'Stanford Student', 'student@stanford.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'STUDENT'),
-(9, 3, 'Stanford Manager', 'manager@stanford.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'LAB_MANAGER'),
-(10, 3, 'Stanford Technician', 'tech@stanford.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'LAB_TECHNICIAN'),
-(11, 3, 'Stanford Inst Head', 'head@stanford.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'INSTITUTION_HEAD'),
+(8, NULL, 2, 'Stanford Student', 'student@stanford.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'STUDENT'),
+(9, 3, 2, 'Stanford Manager', 'manager@stanford.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'LAB_MANAGER'),
+(10, 3, 2, 'Stanford Technician', 'tech@stanford.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'LAB_TECHNICIAN'),
+(11, 3, 2, 'Stanford Inst Head', 'head@stanford.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'INSTITUTION_HEAD'),
 
 -- Harvard (Institution 3)
-(12, 4, 'Harvard Student', 'student@harvard.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'STUDENT'),
-(13, 4, 'Harvard Inst Head', 'head@harvard.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'INSTITUTION_HEAD')
+(12, NULL, 3, 'Harvard Student', 'student@harvard.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'STUDENT'),
+(13, 4, 3, 'Harvard Inst Head', 'head@harvard.edu', '$2a$10$o4G5MQQcAFYLBF49T05bCOLy2wQSv.e20az4lv6.QFL39wta4qEO.', 'INSTITUTION_HEAD')
 ON CONFLICT DO NOTHING;
 
 -- Equipment

@@ -18,6 +18,16 @@ public class UserController {
 
     private final UserService userService;
 
+    private Integer getUserInstitutionId(User user) {
+        if (user.getInstitution() != null) {
+            return user.getInstitution().getId();
+        }
+        if (user.getDepartment() != null && user.getDepartment().getInstitution() != null) {
+            return user.getDepartment().getInstitution().getId();
+        }
+        return null;
+    }
+
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers(
             @RequestParam(required = false) String role) {
@@ -29,8 +39,8 @@ public class UserController {
             list = userService.findAll();
         } else {
             // Restrict returned list to users in their institution
-            if (currentUser.getDepartment() != null && currentUser.getDepartment().getInstitution() != null) {
-                Integer instId = currentUser.getDepartment().getInstitution().getId();
+            Integer instId = getUserInstitutionId(currentUser);
+            if (instId != null) {
                 list = userService.findByInstitutionId(instId);
             } else {
                 list = List.of(currentUser);
@@ -53,6 +63,63 @@ public class UserController {
         }
     }
 
+    @PostMapping
+    public ResponseEntity<?> create(@RequestBody Map<String, Object> body) {
+        try {
+            User user = new User();
+            user.setName((String) body.get("name"));
+            user.setEmail((String) body.get("email"));
+            user.setPassword((String) body.get("password"));
+            user.setRole((String) body.get("role"));
+
+            Integer deptId = body.get("departmentId") != null ? ((Number) body.get("departmentId")).intValue() : null;
+            Integer instId = body.get("institutionId") != null ? ((Number) body.get("institutionId")).intValue() : null;
+
+            // Scoping validation for non-SYSTEM_ADMIN
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            User currentUser = userService.findByEmail(email);
+            if (!currentUser.getRole().equals("SYSTEM_ADMIN")) {
+                Integer callerInstId = getUserInstitutionId(currentUser);
+                if (callerInstId != null) {
+                    instId = callerInstId; // Force to caller's institution
+                }
+            }
+
+            return ResponseEntity.ok(userService.create(user, deptId, instId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> update(@PathVariable Integer id, @RequestBody Map<String, Object> body) {
+        try {
+            User details = new User();
+            details.setName((String) body.get("name"));
+            details.setEmail((String) body.get("email"));
+            if (body.containsKey("role")) {
+                details.setRole((String) body.get("role"));
+            }
+
+            Integer deptId = body.get("departmentId") != null ? ((Number) body.get("departmentId")).intValue() : null;
+            Integer instId = body.get("institutionId") != null ? ((Number) body.get("institutionId")).intValue() : null;
+
+            // Scoping validation for non-SYSTEM_ADMIN
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            User currentUser = userService.findByEmail(email);
+            if (!currentUser.getRole().equals("SYSTEM_ADMIN")) {
+                Integer callerInstId = getUserInstitutionId(currentUser);
+                if (callerInstId != null) {
+                    instId = callerInstId; // Force to caller's institution
+                }
+            }
+
+            return ResponseEntity.ok(userService.update(id, details, deptId, instId));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/{id}/role")
     public ResponseEntity<User> updateRole(
             @PathVariable Integer id,
@@ -62,6 +129,16 @@ public class UserController {
             return ResponseEntity.ok(userService.updateRole(id, role));
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/{id}/password")
+    public ResponseEntity<?> resetPassword(@PathVariable Integer id, @RequestBody Map<String, String> body) {
+        try {
+            String password = body.get("password");
+            return ResponseEntity.ok(userService.resetPassword(id, password));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
 

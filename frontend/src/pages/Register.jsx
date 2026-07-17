@@ -11,14 +11,17 @@ export default function Register() {
     password: '',
     role: 'STUDENT',
     departmentId: '',
+    institutionId: '',
   });
   const [departments, setDepartments] = useState([]);
+  const [institutions, setInstitutions] = useState([]);
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     loadDepartments();
+    loadInstitutions();
   }, []);
 
   const loadDepartments = async () => {
@@ -30,25 +33,54 @@ export default function Register() {
     }
   };
 
+  const loadInstitutions = async () => {
+    try {
+      const res = await api.get('/institutions');
+      setInstitutions(res.data);
+    } catch {
+      // ignore
+    }
+  };
+
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === 'role') {
+      setForm({ ...form, role: value, departmentId: '', institutionId: '' });
+    } else if (name === 'institutionId') {
+      setForm({ ...form, institutionId: value, departmentId: '' });
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
+      // Validation
+      if (!form.institutionId) {
+        toast.error('Please select a college');
+        setLoading(false);
+        return;
+      }
+      if (form.role !== 'STUDENT' && !form.departmentId) {
+        toast.error('Please select a department');
+        setLoading(false);
+        return;
+      }
+
       await register({
         name: form.name,
         email: form.email,
         password: form.password,
         role: form.role,
-        departmentId: form.departmentId ? Number(form.departmentId) : undefined,
+        departmentId: form.role === 'STUDENT' ? undefined : Number(form.departmentId),
+        institutionId: Number(form.institutionId),
       });
       toast.success('Registration successful! Please login.');
       navigate('/login');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Registration failed');
+      toast.error(err.response?.data?.error || err.response?.data?.message || 'Registration failed');
     } finally {
       setLoading(false);
     }
@@ -63,6 +95,11 @@ export default function Register() {
     'INSTITUTION_HEAD',
     'SYSTEM_ADMIN',
   ];
+
+  // Filter departments by selected institution
+  const filteredDepartments = departments.filter(
+    (d) => !form.institutionId || d.institution?.id === Number(form.institutionId)
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -117,26 +154,51 @@ export default function Register() {
               ))}
             </select>
           </div>
+
+          {/* College (Institution) dropdown is always shown so we know their college scope */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">College *</label>
             <select
-              name="departmentId"
-              value={form.departmentId}
+              name="institutionId"
+              value={form.institutionId}
               onChange={handleChange}
               className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              required
             >
-              <option value="">Select Department</option>
-              {departments.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} {d.institution ? `(${d.institution.name})` : ''}
+              <option value="">Select College</option>
+              {institutions.map((inst) => (
+                <option key={inst.id} value={inst.id}>
+                  {inst.name}
                 </option>
               ))}
             </select>
           </div>
+
+          {/* Department selection is only shown if role is NOT student */}
+          {form.role !== 'STUDENT' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Department *</label>
+              <select
+                name="departmentId"
+                value={form.departmentId}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              >
+                <option value="">Select Department</option>
+                {filteredDepartments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
+            className="w-full bg-blue-600 text-white py-2 rounded text-sm font-medium hover:bg-blue-700 disabled:opacity-50 mt-2 cursor-pointer"
           >
             {loading ? 'Registering...' : 'Register'}
           </button>

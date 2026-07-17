@@ -2,9 +2,12 @@ package com.labproject.controller;
 
 import com.labproject.dto.EquipmentRequest;
 import com.labproject.entity.Equipment;
+import com.labproject.entity.User;
 import com.labproject.service.EquipmentService;
+import com.labproject.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,20 +19,60 @@ import java.util.List;
 public class EquipmentController {
 
     private final EquipmentService equipmentService;
+    private final UserService userService;
+
+    private Integer getUserInstitutionId(User user) {
+        if (user.getInstitution() != null) {
+            return user.getInstitution().getId();
+        }
+        if (user.getDepartment() != null && user.getDepartment().getInstitution() != null) {
+            return user.getDepartment().getInstitution().getId();
+        }
+        return null;
+    }
 
     @GetMapping
     public ResponseEntity<List<Equipment>> getAllEquipment(
             @RequestParam(required = false) String status) {
-        if (status != null && !status.isEmpty()) {
-            return ResponseEntity.ok(equipmentService.findByStatus(status));
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        User currentUser = userService.findByEmail(email);
+
+        List<Equipment> list;
+        if (currentUser.getRole().equals("STUDENT") || currentUser.getRole().equals("RESEARCHER")) {
+            Integer instId = getUserInstitutionId(currentUser);
+            if (instId != null) {
+                list = equipmentService.findByInstitutionId(instId);
+            } else {
+                list = List.of();
+            }
+        } else {
+            list = equipmentService.findAll();
         }
-        return ResponseEntity.ok(equipmentService.findAll());
+
+        if (status != null && !status.isEmpty()) {
+            list = list.stream().filter(e -> e.getStatus().equalsIgnoreCase(status)).toList();
+        }
+        return ResponseEntity.ok(list);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Equipment> getById(@PathVariable Integer id) {
         try {
-            return ResponseEntity.ok(equipmentService.findById(id));
+            Equipment eq = equipmentService.findById(id);
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            User currentUser = userService.findByEmail(email);
+
+            if (currentUser.getRole().equals("STUDENT") || currentUser.getRole().equals("RESEARCHER")) {
+                Integer userInstId = getUserInstitutionId(currentUser);
+                Integer eqInstId = (eq.getDepartment() != null && eq.getDepartment().getInstitution() != null)
+                        ? eq.getDepartment().getInstitution().getId() : null;
+
+                if (userInstId == null || !userInstId.equals(eqInstId)) {
+                    return ResponseEntity.status(403).build(); // Block viewing equipment of other colleges
+                }
+            }
+
+            return ResponseEntity.ok(eq);
         } catch (Exception e) {
             return ResponseEntity.notFound().build();
         }

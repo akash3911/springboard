@@ -9,4 +9,5 @@ public class RegisterRequest {
     private String password;
     private String role;
     private Integer departmentId;
+    private Integer institutionId;
 }

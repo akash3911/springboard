@@ -4,8 +4,10 @@ import com.labproject.dto.AuthResponse;
 import com.labproject.dto.LoginRequest;
 import com.labproject.dto.RegisterRequest;
 import com.labproject.entity.Department;
+import com.labproject.entity.Institution;
 import com.labproject.entity.User;
 import com.labproject.repository.DepartmentRepository;
+import com.labproject.repository.InstitutionRepository;
 import com.labproject.repository.UserRepository;
 import com.labproject.security.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final DepartmentRepository departmentRepository;
+    private final InstitutionRepository institutionRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
@@ -54,6 +57,11 @@ public class AuthService {
             Department dept = departmentRepository.findById(request.getDepartmentId())
                     .orElseThrow(() -> new RuntimeException("Department not found"));
             user.setDepartment(dept);
+            user.setInstitution(dept.getInstitution());
+        } else if (request.getInstitutionId() != null) {
+            Institution inst = institutionRepository.findById(request.getInstitutionId())
+                    .orElseThrow(() -> new RuntimeException("Institution not found"));
+            user.setInstitution(inst);
         }
 
         user = userRepository.save(user);
@@ -81,6 +89,17 @@ public class AuthService {
                 instMap.put("name", user.getDepartment().getInstitution().getName());
                 deptMap.put("institution", instMap);
             }
+
+            response.setDepartment(deptMap);
+        } else if (user.getInstitution() != null) {
+            Map<String, Object> deptMap = new HashMap<>();
+            deptMap.put("id", null);
+            deptMap.put("name", null);
+
+            Map<String, Object> instMap = new HashMap<>();
+            instMap.put("id", user.getInstitution().getId());
+            instMap.put("name", user.getInstitution().getName());
+            deptMap.put("institution", instMap);
 
             response.setDepartment(deptMap);
         }
