@@ -1,6 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
@@ -9,19 +9,20 @@ import EquipmentDetail from './pages/EquipmentDetail';
 import Bookings from './pages/Bookings';
 import Maintenance from './pages/Maintenance';
 import Users from './pages/Users';
+import Analytics from './pages/Analytics';
 import Departments from './pages/Departments';
 import Institutions from './pages/Institutions';
-import Analytics from './pages/Analytics';
 import Notifications from './pages/Notifications';
 import Waitlist from './pages/Waitlist';
 
 export default function App() {
   return (
     <Routes>
+      {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      {/* Protected Routes with Main Layout */}
+      {/* Protected Routes Wrapper */}
       <Route
         path="/"
         element={
@@ -36,9 +37,18 @@ export default function App() {
         <Route path="equipment/:id" element={<EquipmentDetail />} />
         <Route path="bookings" element={<Bookings />} />
         <Route path="notifications" element={<Notifications />} />
-        <Route path="waitlist" element={<Waitlist />} />
+        
+        {/* Waitlist page - accessible to STUDENT and RESEARCHER */}
+        <Route
+          path="waitlist"
+          element={
+            <ProtectedRoute allowedRoles={['STUDENT', 'RESEARCHER']}>
+              <Waitlist />
+            </ProtectedRoute>
+          }
+        />
 
-        {/* Role-Restricted Pages */}
+        {/* Maintenance page - accessible to LAB_TECHNICIAN and LAB_MANAGER */}
         <Route
           path="maintenance"
           element={
@@ -47,6 +57,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Users page - accessible to LAB_MANAGER, DEPARTMENT_HEAD, INSTITUTION_HEAD, SYSTEM_ADMIN */}
         <Route
           path="users"
           element={
@@ -55,22 +67,8 @@ export default function App() {
             </ProtectedRoute>
           }
         />
-        <Route
-          path="departments"
-          element={
-            <ProtectedRoute allowedRoles={['INSTITUTION_HEAD', 'SYSTEM_ADMIN']}>
-              <Departments />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="institutions"
-          element={
-            <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
-              <Institutions />
-            </ProtectedRoute>
-          }
-        />
+
+        {/* Analytics page - accessible to DEPARTMENT_HEAD, INSTITUTION_HEAD, SYSTEM_ADMIN */}
         <Route
           path="analytics"
           element={
@@ -79,9 +77,29 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+
+        {/* Departments page - accessible to INSTITUTION_HEAD, SYSTEM_ADMIN */}
+        <Route
+          path="departments"
+          element={
+            <ProtectedRoute allowedRoles={['INSTITUTION_HEAD', 'SYSTEM_ADMIN']}>
+              <Departments />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Institutions page - accessible to SYSTEM_ADMIN */}
+        <Route
+          path="institutions"
+          element={
+            <ProtectedRoute allowedRoles={['SYSTEM_ADMIN']}>
+              <Institutions />
+            </ProtectedRoute>
+          }
+        />
       </Route>
 
-      {/* Catch all */}
+      {/* Catch-all Route */}
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

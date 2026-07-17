@@ -1,8 +1,10 @@
 package com.labproject.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import java.time.LocalDateTime;
 
+@Data
 @Entity
 @Table(name = "waitlist")
 public class Waitlist {
@@ -24,19 +26,4 @@ public class Waitlist {
 
     @Column(nullable = false, length = 50)
     private String status;
-
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-
-    public Equipment getEquipment() { return equipment; }
-    public void setEquipment(Equipment equipment) { this.equipment = equipment; }
-
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-
-    public LocalDateTime getRequestTime() { return requestTime; }
-    public void setRequestTime(LocalDateTime requestTime) { this.requestTime = requestTime; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
 }

@@ -1,8 +1,10 @@
 package com.labproject.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import java.time.LocalDate;
 
+@Data
 @Entity
 @Table(name = "maintenance")
 public class Maintenance {
@@ -30,25 +32,4 @@ public class Maintenance {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "technician_id")
     private User technician;
-
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-
-    public Equipment getEquipment() { return equipment; }
-    public void setEquipment(Equipment equipment) { this.equipment = equipment; }
-
-    public LocalDate getMaintenanceDate() { return maintenanceDate; }
-    public void setMaintenanceDate(LocalDate maintenanceDate) { this.maintenanceDate = maintenanceDate; }
-
-    public String getDescription() { return description; }
-    public void setDescription(String description) { this.description = description; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
-    public LocalDate getNextDueDate() { return nextDueDate; }
-    public void setNextDueDate(LocalDate nextDueDate) { this.nextDueDate = nextDueDate; }
-
-    public User getTechnician() { return technician; }
-    public void setTechnician(User technician) { this.technician = technician; }
 }

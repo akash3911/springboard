@@ -1,8 +1,10 @@
 package com.labproject.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import java.time.LocalDateTime;
 
+@Data
 @Entity
 @Table(name = "notifications")
 public class Notification {
@@ -26,22 +28,4 @@ public class Notification {
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
-
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
-
-    public String getType() { return type; }
-    public void setType(String type) { this.type = type; }
-
-    public Boolean getIsRead() { return isRead; }
-    public void setIsRead(Boolean isRead) { this.isRead = isRead; }
-
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 }

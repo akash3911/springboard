@@ -1,9 +1,11 @@
 package com.labproject.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
+@Data
 @Entity
 @Table(name = "utilization")
 public class Utilization {
@@ -24,19 +26,4 @@ public class Utilization {
 
     @Column(name = "recorded_date", nullable = false)
     private LocalDate recordedDate;
-
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-
-    public Equipment getEquipment() { return equipment; }
-    public void setEquipment(Equipment equipment) { this.equipment = equipment; }
-
-    public BigDecimal getUsageHours() { return usageHours; }
-    public void setUsageHours(BigDecimal usageHours) { this.usageHours = usageHours; }
-
-    public BigDecimal getUtilizationPercentage() { return utilizationPercentage; }
-    public void setUtilizationPercentage(BigDecimal utilizationPercentage) { this.utilizationPercentage = utilizationPercentage; }
-
-    public LocalDate getRecordedDate() { return recordedDate; }
-    public void setRecordedDate(LocalDate recordedDate) { this.recordedDate = recordedDate; }
 }

@@ -5,20 +5,17 @@ import com.labproject.entity.Department;
 import com.labproject.entity.Equipment;
 import com.labproject.repository.DepartmentRepository;
 import com.labproject.repository.EquipmentRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class EquipmentService {
 
     private final EquipmentRepository equipmentRepository;
     private final DepartmentRepository departmentRepository;
-
-    public EquipmentService(EquipmentRepository equipmentRepository, DepartmentRepository departmentRepository) {
-        this.equipmentRepository = equipmentRepository;
-        this.departmentRepository = departmentRepository;
-    }
 
     public List<Equipment> findAll() {
         return equipmentRepository.findAll();

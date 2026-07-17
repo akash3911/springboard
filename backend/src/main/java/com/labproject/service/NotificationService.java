@@ -4,21 +4,18 @@ import com.labproject.entity.Notification;
 import com.labproject.entity.User;
 import com.labproject.repository.NotificationRepository;
 import com.labproject.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-
-    public NotificationService(NotificationRepository notificationRepository, UserRepository userRepository) {
-        this.notificationRepository = notificationRepository;
-        this.userRepository = userRepository;
-    }
 
     public Notification create(Integer userId, String message, String type) {
         User user = userRepository.findById(userId)

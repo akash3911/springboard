@@ -7,24 +7,18 @@ import com.labproject.entity.User;
 import com.labproject.repository.BookingRepository;
 import com.labproject.repository.EquipmentRepository;
 import com.labproject.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class BookingService {
 
     private final BookingRepository bookingRepository;
     private final EquipmentRepository equipmentRepository;
     private final UserRepository userRepository;
-
-    public BookingService(BookingRepository bookingRepository,
-                          EquipmentRepository equipmentRepository,
-                          UserRepository userRepository) {
-        this.bookingRepository = bookingRepository;
-        this.equipmentRepository = equipmentRepository;
-        this.userRepository = userRepository;
-    }
 
     public List<Booking> findAll() {
         return bookingRepository.findAll();

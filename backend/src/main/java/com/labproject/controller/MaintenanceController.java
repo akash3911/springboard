@@ -2,66 +2,56 @@ package com.labproject.controller;
 
 import com.labproject.dto.MaintenanceRequest;
 import com.labproject.entity.Maintenance;
-import com.labproject.entity.User;
 import com.labproject.service.MaintenanceService;
-import com.labproject.service.UserService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/maintenance")
+@RequiredArgsConstructor
 @CrossOrigin(origins = "http://localhost:5173")
 public class MaintenanceController {
 
     private final MaintenanceService maintenanceService;
-    private final UserService userService;
-
-    public MaintenanceController(MaintenanceService maintenanceService, UserService userService) {
-        this.maintenanceService = maintenanceService;
-        this.userService = userService;
-    }
 
     @GetMapping
-    public ResponseEntity<List<Maintenance>> getAllMaintenance() {
+    public ResponseEntity<List<Maintenance>> getAll() {
         return ResponseEntity.ok(maintenanceService.findAll());
     }
 
     @GetMapping("/my")
     public ResponseEntity<List<Maintenance>> getMyMaintenance() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        User user = userService.findByEmail(email);
-        return ResponseEntity.ok(maintenanceService.findByTechnicianId(user.getId()));
+        List<Maintenance> list = maintenanceService.findAll().stream()
+                .filter(m -> m.getTechnician() != null && m.getTechnician().getEmail().equals(email))
+                .toList();
+        return ResponseEntity.ok(list);
     }
 
     @GetMapping("/department/{deptId}")
-    public ResponseEntity<List<Maintenance>> getMaintenanceByDepartment(@PathVariable Integer deptId) {
+    public ResponseEntity<List<Maintenance>> getByDepartment(@PathVariable Integer deptId) {
         return ResponseEntity.ok(maintenanceService.findByDepartmentId(deptId));
     }
 
     @PostMapping
-    public ResponseEntity<?> scheduleMaintenance(@RequestBody MaintenanceRequest request) {
+    public ResponseEntity<Maintenance> schedule(@RequestBody MaintenanceRequest request) {
         try {
-            Maintenance maintenance = maintenanceService.create(request);
-            return ResponseEntity.ok(maintenance);
+            return ResponseEntity.ok(maintenanceService.create(request));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().build();
         }
     }
 
     @PutMapping("/{id}/complete")
-    public ResponseEntity<?> completeMaintenance(@PathVariable Integer id, @RequestBody(required = false) Map<String, String> body) {
+    public ResponseEntity<Maintenance> complete(@PathVariable Integer id) {
         try {
-            String repairNotes = body != null ? body.get("repairNotes") : null;
-            String calibrationNotes = body != null ? body.get("calibrationNotes") : null;
-            
-            Maintenance maintenance = maintenanceService.complete(id, repairNotes, calibrationNotes);
-            return ResponseEntity.ok(maintenance);
+            return ResponseEntity.ok(maintenanceService.complete(id));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+            return ResponseEntity.badRequest().build();
         }
     }
 }

@@ -2,18 +2,16 @@ package com.labproject.service;
 
 import com.labproject.entity.Institution;
 import com.labproject.repository.InstitutionRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class InstitutionService {
 
     private final InstitutionRepository institutionRepository;
-
-    public InstitutionService(InstitutionRepository institutionRepository) {
-        this.institutionRepository = institutionRepository;
-    }
 
     public List<Institution> findAll() {
         return institutionRepository.findAll();

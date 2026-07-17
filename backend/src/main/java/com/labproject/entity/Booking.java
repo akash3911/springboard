@@ -1,8 +1,10 @@
 package com.labproject.entity;
 
 import jakarta.persistence.*;
+import lombok.Data;
 import java.time.LocalDateTime;
 
+@Data
 @Entity
 @Table(name = "bookings")
 public class Booking {
@@ -33,28 +35,4 @@ public class Booking {
 
     @Column(name = "rejection_reason", length = 255)
     private String rejectionReason;
-
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
-
-    public Equipment getEquipment() { return equipment; }
-    public void setEquipment(Equipment equipment) { this.equipment = equipment; }
-
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
-
-    public LocalDateTime getStartTime() { return startTime; }
-    public void setStartTime(LocalDateTime startTime) { this.startTime = startTime; }
-
-    public LocalDateTime getEndTime() { return endTime; }
-    public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
-
-    public String getPurpose() { return purpose; }
-    public void setPurpose(String purpose) { this.purpose = purpose; }
-
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
-
-    public String getRejectionReason() { return rejectionReason; }
-    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 }

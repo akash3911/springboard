@@ -8,6 +8,7 @@ import com.labproject.entity.User;
 import com.labproject.repository.DepartmentRepository;
 import com.labproject.repository.UserRepository;
 import com.labproject.security.JwtUtil;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -17,6 +18,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
@@ -24,18 +26,6 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
     private final AuthenticationManager authenticationManager;
-
-    public AuthService(UserRepository userRepository,
-                       DepartmentRepository departmentRepository,
-                       PasswordEncoder passwordEncoder,
-                       JwtUtil jwtUtil,
-                       AuthenticationManager authenticationManager) {
-        this.userRepository = userRepository;
-        this.departmentRepository = departmentRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtUtil = jwtUtil;
-        this.authenticationManager = authenticationManager;
-    }
 
     public AuthResponse login(LoginRequest request) {
         authenticationManager.authenticate(

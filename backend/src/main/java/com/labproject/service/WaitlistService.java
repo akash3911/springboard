@@ -6,25 +6,19 @@ import com.labproject.entity.Waitlist;
 import com.labproject.repository.EquipmentRepository;
 import com.labproject.repository.UserRepository;
 import com.labproject.repository.WaitlistRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class WaitlistService {
 
     private final WaitlistRepository waitlistRepository;
     private final EquipmentRepository equipmentRepository;
     private final UserRepository userRepository;
-
-    public WaitlistService(WaitlistRepository waitlistRepository,
-                           EquipmentRepository equipmentRepository,
-                           UserRepository userRepository) {
-        this.waitlistRepository = waitlistRepository;
-        this.equipmentRepository = equipmentRepository;
-        this.userRepository = userRepository;
-    }
 
     public Waitlist joinWaitlist(Integer equipmentId, String userEmail) {
         User user = userRepository.findByEmail(userEmail)

@@ -7,25 +7,18 @@ import com.labproject.entity.User;
 import com.labproject.repository.EquipmentRepository;
 import com.labproject.repository.MaintenanceRepository;
 import com.labproject.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class MaintenanceService {
 
     private final MaintenanceRepository maintenanceRepository;
     private final EquipmentRepository equipmentRepository;
     private final UserRepository userRepository;
-
-    public MaintenanceService(MaintenanceRepository maintenanceRepository,
-                              EquipmentRepository equipmentRepository,
-                              UserRepository userRepository) {
-        this.maintenanceRepository = maintenanceRepository;
-        this.equipmentRepository = equipmentRepository;
-        this.userRepository = userRepository;
-    }
 
     public List<Maintenance> findAll() {
         return maintenanceRepository.findAll();
@@ -58,15 +51,10 @@ public class MaintenanceService {
 
         Maintenance maintenance = new Maintenance();
         maintenance.setEquipment(equipment);
-        
-        LocalDate date = request.getMaintenanceDate() != null ? request.getMaintenanceDate() : request.getScheduledDate();
-        if (date == null) {
-            date = LocalDate.now();
-        }
-        maintenance.setMaintenanceDate(date);
+        maintenance.setMaintenanceDate(request.getMaintenanceDate());
         maintenance.setDescription(request.getDescription());
         maintenance.setStatus("PENDING");
-        maintenance.setNextDueDate(request.getNextDueDate() != null ? request.getNextDueDate() : date.plusMonths(3));
+        maintenance.setNextDueDate(request.getNextDueDate());
 
         if (request.getTechnicianId() != null) {
             User technician = userRepository.findById(request.getTechnicianId())
@@ -77,18 +65,9 @@ public class MaintenanceService {
         return maintenanceRepository.save(maintenance);
     }
 
-    public Maintenance complete(Integer id, String repairNotes, String calibrationNotes) {
+    public Maintenance complete(Integer id) {
         Maintenance maintenance = findById(id);
         maintenance.setStatus("COMPLETED");
-
-        String desc = maintenance.getDescription() != null ? maintenance.getDescription() : "";
-        if (repairNotes != null && !repairNotes.trim().isEmpty()) {
-            desc += "\n[Repair Notes: " + repairNotes + "]";
-        }
-        if (calibrationNotes != null && !calibrationNotes.trim().isEmpty()) {
-            desc += "\n[Calibration Notes: " + calibrationNotes + "]";
-        }
-        maintenance.setDescription(desc);
 
         // Set equipment back to AVAILABLE
         Equipment equipment = maintenance.getEquipment();
