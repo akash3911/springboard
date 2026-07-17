@@ -112,34 +112,33 @@ export default function Equipment() {
   };
 
   const filtered = equipment.filter((e) => {
+    const userInstId = user?.institution?.id || user?.department?.institution?.id;
+    const eqInstId = e.department?.institution?.id;
+
     // 1. Role-based visibility rules
     if (user?.role === 'STUDENT') {
-      // Students can ONLY view available (or booked/under-maint) equipment in their OWN department
-      if (e.department?.id !== user?.department?.id) return false;
+      // Students can ONLY view equipment in their own college (institution)
+      if (eqInstId !== userInstId) return false;
       // Cannot access restricted equipment
       if (e.isRestricted) return false;
     } else if (user?.role === 'RESEARCHER') {
       // Researchers can view equipment in their OWN institution
-      const isSameInst = e.department?.institution?.id === user?.department?.institution?.id;
+      const isSameInst = eqInstId === userInstId;
       // Researchers can view external (other institution) equipment ONLY if it is marked as shared
       const isShared = e.isShared;
       if (!isSameInst && !isShared) return false;
-      // Note: Researchers CAN view restricted equipment (within their institution or if shared)
     } else if (user?.role === 'LAB_TECHNICIAN') {
       // Techs view in their institution
-      const isSameInst = e.department?.institution?.id === user?.department?.institution?.id;
-      if (!isSameInst) return false;
+      if (eqInstId !== userInstId) return false;
     } else if (user?.role === 'LAB_MANAGER') {
-      // Lab managers can view equipment in their department (to manage) or their institution
-      const isSameInst = e.department?.institution?.id === user?.department?.institution?.id;
-      if (!isSameInst) return false;
+      // Lab managers can view equipment in their institution
+      if (eqInstId !== userInstId) return false;
     } else if (user?.role === 'DEPARTMENT_HEAD') {
       // Dept heads view all department equipment
       if (e.department?.id !== user?.department?.id) return false;
     } else if (user?.role === 'INSTITUTION_HEAD') {
       // Inst heads view all equipment in their institution
-      const isSameInst = e.department?.institution?.id === user?.department?.institution?.id;
-      if (!isSameInst) return false;
+      if (eqInstId !== userInstId) return false;
     }
     // SYSTEM_ADMIN sees everything
 
@@ -364,7 +363,7 @@ export default function Equipment() {
       {/* Equipment Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((eq) => {
-          const isExternal = eq.department?.institution?.id !== user?.department?.institution?.id;
+          const isExternal = eq.department?.institution?.id !== (user?.institution?.id || user?.department?.institution?.id);
           return (
             <div
               key={eq.id}

@@ -52,15 +52,15 @@ export default function EquipmentDetail() {
     }
   };
 
-  const isOwnDept = equipment && user && equipment.department?.id === user.department?.id;
-  const isOwnInst = equipment && user && equipment.department?.institution?.id === user.department?.institution?.id;
+  const isOwnDept = equipment && user && user.department?.id && equipment.department?.id === user.department?.id;
+  const isOwnInst = equipment && user && equipment.department?.institution?.id === (user.institution?.id || user.department?.institution?.id);
 
   // Enforce precise Student/Researcher access checks
-  const isStudentBlocked = role === 'STUDENT' && (!isOwnDept || equipment?.isRestricted);
+  const isStudentBlocked = role === 'STUDENT' && (!isOwnInst || equipment?.isRestricted);
   const isResearcherBlocked = role === 'RESEARCHER' && (!isOwnInst && !equipment?.isShared);
 
   const canBook = ['STUDENT', 'RESEARCHER', 'LAB_MANAGER'].includes(role) && 
-                    (role === 'STUDENT' ? isOwnDept && !equipment?.isRestricted :
+                    (role === 'STUDENT' ? isOwnInst && !equipment?.isRestricted :
                      role === 'RESEARCHER' ? (isOwnInst || equipment?.isShared) : true);
 
   const canEdit = (role === 'LAB_MANAGER' && isOwnDept) || 
@@ -73,7 +73,7 @@ export default function EquipmentDetail() {
   const canScheduleMaint = (role === 'LAB_MANAGER' && isOwnDept);
   
   const canJoinWaitlist = ['STUDENT', 'RESEARCHER'].includes(role) && 
-                          (role === 'STUDENT' ? isOwnDept && !equipment?.isRestricted :
+                          (role === 'STUDENT' ? isOwnInst && !equipment?.isRestricted :
                            role === 'RESEARCHER' ? (isOwnInst || equipment?.isShared) : true);
 
   const handleBook = async (e) => {
@@ -173,7 +173,7 @@ export default function EquipmentDetail() {
     );
   }
 
-  const isExternal = equipment.department?.institution?.id !== user?.department?.institution?.id;
+  const isExternal = equipment.department?.institution?.id !== (user?.institution?.id || user?.department?.institution?.id);
   const hideTagsRoles = ['STUDENT', 'RESEARCHER'];
   const showTags = !hideTagsRoles.includes(role);
 
