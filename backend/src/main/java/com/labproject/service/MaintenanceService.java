@@ -77,9 +77,18 @@ public class MaintenanceService {
         return maintenanceRepository.save(maintenance);
     }
 
-    public Maintenance complete(Integer id) {
+    public Maintenance complete(Integer id, String repairNotes, String calibrationNotes) {
         Maintenance maintenance = findById(id);
         maintenance.setStatus("COMPLETED");
+
+        String desc = maintenance.getDescription() != null ? maintenance.getDescription() : "";
+        if (repairNotes != null && !repairNotes.trim().isEmpty()) {
+            desc += "\n[Repair Notes: " + repairNotes + "]";
+        }
+        if (calibrationNotes != null && !calibrationNotes.trim().isEmpty()) {
+            desc += "\n[Calibration Notes: " + calibrationNotes + "]";
+        }
+        maintenance.setDescription(desc);
 
         // Set equipment back to AVAILABLE
         Equipment equipment = maintenance.getEquipment();

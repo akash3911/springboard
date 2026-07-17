@@ -14,7 +14,7 @@ const statusColors = {
 
 export default function EquipmentDetail() {
   const { id } = useParams();
-  const { user } = useAuth();
+  const { user } = { user: JSON.parse(localStorage.getItem('user')) }; // Get fresh user state
   const navigate = useNavigate();
   const [equipment, setEquipment] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -35,11 +35,6 @@ export default function EquipmentDetail() {
   const [editForm, setEditForm] = useState({});
 
   const role = user?.role;
-  const canBook = ['STUDENT', 'RESEARCHER', 'LAB_MANAGER'].includes(role);
-  const canEdit = ['LAB_MANAGER', 'DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN'].includes(role);
-  const canDelete = ['LAB_MANAGER', 'DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN'].includes(role);
-  const canScheduleMaint = role === 'LAB_MANAGER';
-  const canJoinWaitlist = ['STUDENT', 'RESEARCHER'].includes(role);
 
   useEffect(() => {
     loadEquipment();
@@ -56,6 +51,30 @@ export default function EquipmentDetail() {
       setLoading(false);
     }
   };
+
+  const isOwnDept = equipment && user && equipment.department?.id === user.department?.id;
+  const isOwnInst = equipment && user && equipment.department?.institution?.id === user.department?.institution?.id;
+
+  // Enforce precise Student/Researcher access checks
+  const isStudentBlocked = role === 'STUDENT' && (!isOwnDept || equipment?.isRestricted);
+  const isResearcherBlocked = role === 'RESEARCHER' && (!isOwnInst && !equipment?.isShared);
+
+  const canBook = ['STUDENT', 'RESEARCHER', 'LAB_MANAGER'].includes(role) && 
+                    (role === 'STUDENT' ? isOwnDept && !equipment?.isRestricted :
+                     role === 'RESEARCHER' ? (isOwnInst || equipment?.isShared) : true);
+
+  const canEdit = (role === 'LAB_MANAGER' && isOwnDept) || 
+                  (role === 'DEPARTMENT_HEAD' && isOwnDept) || 
+                  (role === 'INSTITUTION_HEAD' && isOwnInst) || 
+                  (role === 'SYSTEM_ADMIN');
+
+  const canDelete = canEdit;
+
+  const canScheduleMaint = (role === 'LAB_MANAGER' && isOwnDept);
+  
+  const canJoinWaitlist = ['STUDENT', 'RESEARCHER'].includes(role) && 
+                          (role === 'STUDENT' ? isOwnDept && !equipment?.isRestricted :
+                           role === 'RESEARCHER' ? (isOwnInst || equipment?.isShared) : true);
 
   const handleBook = async (e) => {
     e.preventDefault();
@@ -104,6 +123,7 @@ export default function EquipmentDetail() {
 
   const loadTechnicians = async () => {
     try {
+      // Tech dropdown list: if system admin, get all techs. If not, restrict to techs in their institution
       const res = await api.get('/users?role=LAB_TECHNICIAN');
       setTechnicians(Array.isArray(res.data) ? res.data : []);
     } catch {
@@ -114,7 +134,11 @@ export default function EquipmentDetail() {
   const handleEdit = async (e) => {
     e.preventDefault();
     try {
-      await api.put(`/equipment/${id}`, editForm);
+      const payload = {
+        ...editForm,
+        departmentId: editForm.department?.id || undefined,
+      };
+      await api.put(`/equipment/${id}`, payload);
       toast.success('Equipment updated');
       setShowEditForm(false);
       loadEquipment();
@@ -136,6 +160,22 @@ export default function EquipmentDetail() {
 
   if (loading) return <p className="text-gray-500">Loading...</p>;
   if (!equipment) return <p className="text-gray-500">Equipment not found</p>;
+
+  if (isStudentBlocked || isResearcherBlocked) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-700">
+        <h3 className="font-bold text-lg mb-2">Access Denied</h3>
+        <p>You do not have the required permissions to view this restricted or department-specific equipment.</p>
+        <button onClick={() => navigate('/equipment')} className="mt-4 text-blue-600 font-medium hover:underline flex items-center gap-1">
+          <ArrowLeft size={16} /> Back to Catalog
+        </button>
+      </div>
+    );
+  }
+
+  const isExternal = equipment.department?.institution?.id !== user?.department?.institution?.id;
+  const hideTagsRoles = ['STUDENT', 'RESEARCHER'];
+  const showTags = !hideTagsRoles.includes(role);
 
   return (
     <div>
@@ -170,8 +210,8 @@ export default function EquipmentDetail() {
             <p className="text-gray-800">{equipment.manufacturer || 'N/A'}</p>
           </div>
           <div>
-            <p className="text-sm text-gray-500">Model Number</p>
-            <p className="text-gray-800">{equipment.modelNumber || 'N/A'}</p>
+            <p className="text-sm text-gray-500">Model</p>
+            <p className="text-gray-800">{equipment.model || 'N/A'}</p>
           </div>
           <div>
             <p className="text-sm text-gray-500">Serial Number</p>
@@ -195,12 +235,37 @@ export default function EquipmentDetail() {
           </div>
           <div>
             <p className="text-sm text-gray-500">Department</p>
-            <p className="text-gray-800">{equipment.department?.name || 'N/A'}</p>
+            <p className="text-gray-800">
+              {equipment.department?.name || 'N/A'} ({equipment.department?.institution?.name || 'N/A'})
+            </p>
           </div>
-          <div>
-            <p className="text-sm text-gray-500">Access Level</p>
-            <p className="text-gray-800">{equipment.accessLevel?.replace(/_/g, ' ') || 'N/A'}</p>
-          </div>
+          {showTags && (
+            <div>
+              <p className="text-sm text-gray-500 mb-1">Tags</p>
+              <div className="flex gap-1 flex-wrap">
+                {equipment.isRestricted && (
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 border border-red-200">
+                    Restricted
+                  </span>
+                )}
+                {equipment.isShared && (
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-200">
+                    Shared
+                  </span>
+                )}
+                {isExternal && (
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-orange-50 text-orange-600 border border-orange-200">
+                    External
+                  </span>
+                )}
+                {!equipment.isRestricted && !equipment.isShared && !isExternal && (
+                  <span className="text-[10px] px-2 py-0.5 rounded bg-gray-50 text-gray-600 border border-gray-200">
+                    Internal
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Specifications */}
@@ -226,7 +291,7 @@ export default function EquipmentDetail() {
           {canBook && equipment.status === 'AVAILABLE' && (
             <button
               onClick={() => setShowBookForm(!showBookForm)}
-              className="flex items-center gap-1 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+              className="flex items-center gap-1 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-medium cursor-pointer"
             >
               <Calendar size={16} />
               Book
@@ -235,7 +300,7 @@ export default function EquipmentDetail() {
           {canJoinWaitlist && equipment.status === 'BOOKED' && (
             <button
               onClick={handleJoinWaitlist}
-              className="flex items-center gap-1 bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700"
+              className="flex items-center gap-1 bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700 font-medium cursor-pointer"
             >
               Join Waitlist
             </button>
@@ -246,7 +311,7 @@ export default function EquipmentDetail() {
                 setShowMaintenanceForm(!showMaintenanceForm);
                 if (!showMaintenanceForm) loadTechnicians();
               }}
-              className="flex items-center gap-1 bg-yellow-600 text-white px-4 py-2 rounded text-sm hover:bg-yellow-700"
+              className="flex items-center gap-1 bg-yellow-600 text-white px-4 py-2 rounded text-sm hover:bg-yellow-700 font-medium cursor-pointer"
             >
               <Wrench size={16} />
               Schedule Maintenance
@@ -255,7 +320,7 @@ export default function EquipmentDetail() {
           {canEdit && (
             <button
               onClick={() => setShowEditForm(!showEditForm)}
-              className="flex items-center gap-1 bg-gray-600 text-white px-4 py-2 rounded text-sm hover:bg-gray-700"
+              className="flex items-center gap-1 bg-gray-600 text-white px-4 py-2 rounded text-sm hover:bg-gray-700 font-medium cursor-pointer"
             >
               <Edit size={16} />
               Edit
@@ -264,7 +329,7 @@ export default function EquipmentDetail() {
           {canDelete && (
             <button
               onClick={handleDelete}
-              className="flex items-center gap-1 bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700"
+              className="flex items-center gap-1 bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium cursor-pointer"
             >
               <Trash2 size={16} />
               Delete
@@ -325,14 +390,14 @@ export default function EquipmentDetail() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-medium cursor-pointer"
               >
                 Submit Booking
               </button>
               <button
                 type="button"
                 onClick={() => setShowBookForm(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300"
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300 font-medium cursor-pointer"
               >
                 Cancel
               </button>
@@ -375,7 +440,7 @@ export default function EquipmentDetail() {
                   <option value="">Select Technician</option>
                   {technicians.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.name}
+                      {t.name} ({t.department?.name})
                     </option>
                   ))}
                 </select>
@@ -398,14 +463,14 @@ export default function EquipmentDetail() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="bg-yellow-600 text-white px-4 py-2 rounded text-sm hover:bg-yellow-700"
+                className="bg-yellow-600 text-white px-4 py-2 rounded text-sm hover:bg-yellow-700 font-medium cursor-pointer"
               >
                 Schedule
               </button>
               <button
                 type="button"
                 onClick={() => setShowMaintenanceForm(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300"
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300 font-medium cursor-pointer"
               >
                 Cancel
               </button>
@@ -447,11 +512,11 @@ export default function EquipmentDetail() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Model Number</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
               <input
                 type="text"
-                value={editForm.modelNumber || ''}
-                onChange={(e) => setEditForm({ ...editForm, modelNumber: e.target.value })}
+                value={editForm.model || ''}
+                onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
               />
             </div>
@@ -477,6 +542,27 @@ export default function EquipmentDetail() {
                 <option value="OUT_OF_SERVICE">Out of Service</option>
               </select>
             </div>
+            <div className="flex items-center gap-4 mt-6">
+              <label className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+                <input
+                  type="checkbox"
+                  checked={editForm.isRestricted || false}
+                  onChange={(e) => setEditForm({ ...editForm, isRestricted: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                Restricted Equipment
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+                <input
+                  type="checkbox"
+                  checked={editForm.isShared || false}
+                  onChange={(e) => setEditForm({ ...editForm, isShared: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                Shared (Inter-Institution)
+              </label>
+            </div>
+            <div>{/* Spacer */}</div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Specifications</label>
               <textarea
@@ -498,14 +584,14 @@ export default function EquipmentDetail() {
             <div className="col-span-2 flex gap-2">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-medium cursor-pointer"
               >
                 Save Changes
               </button>
               <button
                 type="button"
                 onClick={() => setShowEditForm(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300"
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300 font-medium cursor-pointer"
               >
                 Cancel
               </button>

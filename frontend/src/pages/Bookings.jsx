@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 
@@ -11,12 +10,13 @@ const statusColors = {
 };
 
 export default function Bookings() {
-  const { user } = useAuth();
+  const { user } = { user: JSON.parse(localStorage.getItem('user')) }; // Get fresh user state
   const [bookings, setBookings] = useState([]);
   const [rejectId, setRejectId] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
 
-  const isManager = ['LAB_MANAGER', 'DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN'].includes(user?.role);
+  const role = user?.role;
+  const isManager = ['LAB_MANAGER', 'DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN'].includes(role);
 
   useEffect(() => {
     loadBookings();
@@ -44,7 +44,7 @@ export default function Bookings() {
 
   const handleReject = async (id) => {
     try {
-      await api.put(`/bookings/${id}/reject`, { reason: rejectReason });
+      await api.put(`/bookings/${id}/reject`, { rejectionReason: rejectReason });
       toast.success('Booking rejected');
       setRejectId(null);
       setRejectReason('');
@@ -73,16 +73,14 @@ export default function Bookings() {
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
               <th className="text-left px-4 py-3 font-medium text-gray-600">Equipment</th>
-              {isManager && (
+              {(isManager || role === 'SYSTEM_ADMIN') && (
                 <th className="text-left px-4 py-3 font-medium text-gray-600">User</th>
               )}
               <th className="text-left px-4 py-3 font-medium text-gray-600">Start Time</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">End Time</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Purpose</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-              {isManager && (
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
-              )}
+              <th className="text-left px-4 py-3 font-medium text-gray-600">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -93,8 +91,8 @@ export default function Bookings() {
                   idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                 }`}
               >
-                <td className="px-4 py-3">{b.equipment?.name || b.equipmentName || 'N/A'}</td>
-                {isManager && (
+                <td className="px-4 py-3 font-medium text-gray-800">{b.equipment?.name || b.equipmentName || 'N/A'}</td>
+                {(isManager || role === 'SYSTEM_ADMIN') && (
                   <td className="px-4 py-3">{b.user?.name || b.userName || 'N/A'}</td>
                 )}
                 <td className="px-4 py-3">
@@ -113,32 +111,42 @@ export default function Bookings() {
                     {b.status}
                   </span>
                 </td>
-                {isManager && (
-                  <td className="px-4 py-3">
-                    {b.status === 'PENDING' && (
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => handleApprove(b.id)}
-                          className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => setRejectId(b.id)}
-                          className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700"
-                        >
-                          Reject
-                        </button>
+                <td className="px-4 py-3">
+                  {b.status === 'PENDING' && (
+                    <div className="flex gap-1">
+                      {isManager ? (
+                        <>
+                          <button
+                            onClick={() => handleApprove(b.id)}
+                            className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700 font-medium cursor-pointer"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => setRejectId(b.id)}
+                            className="bg-red-600 text-white px-2 py-1 rounded text-xs hover:bg-red-700 font-medium cursor-pointer"
+                          >
+                            Reject
+                          </button>
+                          <button
+                            onClick={() => handleCancel(b.id)}
+                            className="bg-gray-500 text-white px-2 py-1 rounded text-xs hover:bg-gray-600 font-medium cursor-pointer"
+                          >
+                            Cancel
+                          </button>
+                        </>
+                      ) : (
+                        // Standard user can cancel their own pending booking
                         <button
                           onClick={() => handleCancel(b.id)}
-                          className="bg-gray-500 text-white px-2 py-1 rounded text-xs hover:bg-gray-600"
+                          className="bg-gray-500 text-white px-2 py-1 rounded text-xs hover:bg-gray-600 font-medium cursor-pointer"
                         >
                           Cancel
                         </button>
-                      </div>
-                    )}
-                  </td>
-                )}
+                      )}
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -150,8 +158,8 @@ export default function Bookings() {
 
       {/* Reject Reason Modal */}
       {rejectId && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black/35 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md border border-gray-200">
             <h3 className="text-lg font-semibold mb-3">Rejection Reason</h3>
             <textarea
               value={rejectReason}
@@ -166,13 +174,13 @@ export default function Bookings() {
                   setRejectId(null);
                   setRejectReason('');
                 }}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300"
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300 font-medium cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={() => handleReject(rejectId)}
-                className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700"
+                className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium cursor-pointer"
               >
                 Reject
               </button>

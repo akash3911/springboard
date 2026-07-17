@@ -12,14 +12,8 @@ const statusColors = {
   OUT_OF_SERVICE: 'bg-red-100 text-red-700',
 };
 
-const tagColors = {
-  RESTRICTED: 'bg-red-50 text-red-600',
-  SHARED: 'bg-purple-50 text-purple-600',
-  EXTERNAL: 'bg-orange-50 text-orange-600',
-};
-
 export default function Equipment() {
-  const { user } = useAuth();
+  const { user } = { user: JSON.parse(localStorage.getItem('user')) }; // Get fresh user state
   const navigate = useNavigate();
   const [equipment, setEquipment] = useState([]);
   const [search, setSearch] = useState('');
@@ -32,16 +26,17 @@ export default function Equipment() {
     name: '',
     category: '',
     manufacturer: '',
-    modelNumber: '',
+    model: '',
     serialNumber: '',
     status: 'AVAILABLE',
     roomNumber: '',
-    contactEmail: '',
+    contactEmail: user?.email || '',
     purchaseDate: '',
     specifications: '',
     description: '',
-    accessLevel: 'DEPARTMENT_ONLY',
-    departmentId: '',
+    isShared: false,
+    isRestricted: false,
+    departmentId: user?.role === 'LAB_MANAGER' ? user?.department?.id || '' : '',
   });
 
   const canManage = ['LAB_MANAGER', 'DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN'].includes(user?.role);
@@ -69,7 +64,16 @@ export default function Equipment() {
   const loadDepartments = async () => {
     try {
       const res = await api.get('/departments');
-      setDepartments(res.data);
+      // If Lab Manager, limit departments to their own department
+      if (user?.role === 'LAB_MANAGER') {
+        setDepartments(res.data.filter(d => d.id === user?.department?.id));
+      } else if (user?.role === 'DEPARTMENT_HEAD') {
+        setDepartments(res.data.filter(d => d.id === user?.department?.id));
+      } else if (user?.role === 'INSTITUTION_HEAD') {
+        setDepartments(res.data.filter(d => d.institution?.id === user?.department?.institution?.id));
+      } else {
+        setDepartments(res.data);
+      }
     } catch {
       // ignore
     }
@@ -78,26 +82,28 @@ export default function Equipment() {
   const handleAdd = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/equipment', {
+      const payload = {
         ...addForm,
         departmentId: addForm.departmentId ? Number(addForm.departmentId) : undefined,
-      });
+      };
+      await api.post('/equipment', payload);
       toast.success('Equipment added');
       setShowAddForm(false);
       setAddForm({
         name: '',
         category: '',
         manufacturer: '',
-        modelNumber: '',
+        model: '',
         serialNumber: '',
         status: 'AVAILABLE',
         roomNumber: '',
-        contactEmail: '',
+        contactEmail: user?.email || '',
         purchaseDate: '',
         specifications: '',
         description: '',
-        accessLevel: 'DEPARTMENT_ONLY',
-        departmentId: '',
+        isShared: false,
+        isRestricted: false,
+        departmentId: user?.role === 'LAB_MANAGER' ? user?.department?.id || '' : '',
       });
       loadEquipment();
     } catch (err) {
@@ -106,21 +112,45 @@ export default function Equipment() {
   };
 
   const filtered = equipment.filter((e) => {
+    // 1. Role-based visibility rules
+    if (user?.role === 'STUDENT') {
+      // Students can ONLY view available (or booked/under-maint) equipment in their OWN department
+      if (e.department?.id !== user?.department?.id) return false;
+      // Cannot access restricted equipment
+      if (e.isRestricted) return false;
+    } else if (user?.role === 'RESEARCHER') {
+      // Researchers can view equipment in their OWN institution
+      const isSameInst = e.department?.institution?.id === user?.department?.institution?.id;
+      // Researchers can view external (other institution) equipment ONLY if it is marked as shared
+      const isShared = e.isShared;
+      if (!isSameInst && !isShared) return false;
+      // Note: Researchers CAN view restricted equipment (within their institution or if shared)
+    } else if (user?.role === 'LAB_TECHNICIAN') {
+      // Techs view in their institution
+      const isSameInst = e.department?.institution?.id === user?.department?.institution?.id;
+      if (!isSameInst) return false;
+    } else if (user?.role === 'LAB_MANAGER') {
+      // Lab managers can view equipment in their department (to manage) or their institution
+      const isSameInst = e.department?.institution?.id === user?.department?.institution?.id;
+      if (!isSameInst) return false;
+    } else if (user?.role === 'DEPARTMENT_HEAD') {
+      // Dept heads view all department equipment
+      if (e.department?.id !== user?.department?.id) return false;
+    } else if (user?.role === 'INSTITUTION_HEAD') {
+      // Inst heads view all equipment in their institution
+      const isSameInst = e.department?.institution?.id === user?.department?.institution?.id;
+      if (!isSameInst) return false;
+    }
+    // SYSTEM_ADMIN sees everything
+
     const matchSearch =
       !search ||
       e.name?.toLowerCase().includes(search.toLowerCase()) ||
-      e.modelNumber?.toLowerCase().includes(search.toLowerCase());
+      e.model?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = !statusFilter || e.status === statusFilter;
     const matchCategory = !categoryFilter || e.category === categoryFilter;
     return matchSearch && matchStatus && matchCategory;
   });
-
-  const getAccessTag = (accessLevel) => {
-    if (accessLevel === 'RESTRICTED') return 'Restricted';
-    if (accessLevel === 'SHARED') return 'Shared';
-    if (accessLevel === 'EXTERNAL') return 'External';
-    return null;
-  };
 
   return (
     <div>
@@ -208,11 +238,11 @@ export default function Equipment() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Model Number</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
               <input
                 type="text"
-                value={addForm.modelNumber}
-                onChange={(e) => setAddForm({ ...addForm, modelNumber: e.target.value })}
+                value={addForm.model}
+                onChange={(e) => setAddForm({ ...addForm, model: e.target.value })}
                 className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
               />
             </div>
@@ -253,32 +283,46 @@ export default function Equipment() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Access Level</label>
-              <select
-                value={addForm.accessLevel}
-                onChange={(e) => setAddForm({ ...addForm, accessLevel: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-              >
-                <option value="DEPARTMENT_ONLY">Department Only</option>
-                <option value="RESTRICTED">Restricted</option>
-                <option value="SHARED">Shared</option>
-                <option value="EXTERNAL">External</option>
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Department *</label>
+              {user?.role === 'LAB_MANAGER' ? (
+                <div className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 font-medium">
+                  {user?.department?.name}
+                </div>
+              ) : (
+                <select
+                  value={addForm.departmentId}
+                  onChange={(e) => setAddForm({ ...addForm, departmentId: e.target.value })}
+                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  required
+                >
+                  <option value="">Select Department</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name} ({d.institution?.name})
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-              <select
-                value={addForm.departmentId}
-                onChange={(e) => setAddForm({ ...addForm, departmentId: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-              >
-                <option value="">Select Department</option>
-                {departments.map((d) => (
-                  <option key={d.id} value={d.id}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
+            <div className="flex items-center gap-4 mt-6">
+              <label className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+                <input
+                  type="checkbox"
+                  checked={addForm.isRestricted}
+                  onChange={(e) => setAddForm({ ...addForm, isRestricted: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                Restricted Equipment
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+                <input
+                  type="checkbox"
+                  checked={addForm.isShared}
+                  onChange={(e) => setAddForm({ ...addForm, isShared: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+                Shared (Inter-Institution)
+              </label>
             </div>
             <div className="col-span-2">
               <label className="block text-sm font-medium text-gray-700 mb-1">Specifications</label>
@@ -319,35 +363,51 @@ export default function Equipment() {
 
       {/* Equipment Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map((eq) => (
-          <div
-            key={eq.id}
-            onClick={() => navigate(`/equipment/${eq.id}`)}
-            className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all"
-          >
-            <div className="flex items-start justify-between mb-2">
-              <h3 className="font-semibold text-gray-800">{eq.name}</h3>
-              <span
-                className={`text-xs px-2 py-1 rounded-full ${
-                  statusColors[eq.status] || 'bg-gray-100 text-gray-600'
-                }`}
-              >
-                {eq.status?.replace(/_/g, ' ')}
-              </span>
+        {filtered.map((eq) => {
+          const isExternal = eq.department?.institution?.id !== user?.department?.institution?.id;
+          return (
+            <div
+              key={eq.id}
+              onClick={() => navigate(`/equipment/${eq.id}`)}
+              className="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer hover:border-blue-300 hover:shadow-sm transition-all flex flex-col justify-between"
+            >
+              <div>
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="font-semibold text-gray-800">{eq.name}</h3>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full ${
+                      statusColors[eq.status] || 'bg-gray-100 text-gray-600'
+                    }`}
+                  >
+                    {eq.status?.replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 mb-1">Model: {eq.model || 'N/A'}</p>
+                <p className="text-sm text-gray-500 mb-2">Room: {eq.roomNumber || 'N/A'}</p>
+              </div>
+
+              {showTags && (
+                <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
+                  {eq.isRestricted && (
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 border border-red-200">
+                      Restricted
+                    </span>
+                  )}
+                  {eq.isShared && (
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-200">
+                      Shared
+                    </span>
+                  )}
+                  {isExternal && (
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-orange-50 text-orange-600 border border-orange-200">
+                      External ({eq.department?.institution?.name})
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            <p className="text-sm text-gray-500 mb-1">Model: {eq.modelNumber || 'N/A'}</p>
-            <p className="text-sm text-gray-500 mb-2">Room: {eq.roomNumber || 'N/A'}</p>
-            {showTags && eq.accessLevel && getAccessTag(eq.accessLevel) && (
-              <span
-                className={`text-xs px-2 py-0.5 rounded ${
-                  tagColors[eq.accessLevel] || ''
-                }`}
-              >
-                {getAccessTag(eq.accessLevel)}
-              </span>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {filtered.length === 0 && (

@@ -53,9 +53,12 @@ public class MaintenanceController {
     }
 
     @PutMapping("/{id}/complete")
-    public ResponseEntity<?> completeMaintenance(@PathVariable Integer id) {
+    public ResponseEntity<?> completeMaintenance(@PathVariable Integer id, @RequestBody(required = false) Map<String, String> body) {
         try {
-            Maintenance maintenance = maintenanceService.complete(id);
+            String repairNotes = body != null ? body.get("repairNotes") : null;
+            String calibrationNotes = body != null ? body.get("calibrationNotes") : null;
+            
+            Maintenance maintenance = maintenanceService.complete(id, repairNotes, calibrationNotes);
             return ResponseEntity.ok(maintenance);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
