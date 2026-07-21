@@ -69,11 +69,24 @@ public class BookingService {
             }
         }
 
+        // Prevent duplicate pending booking requests by the same user for this equipment
+        boolean userHasPendingBooking = bookingRepository.findByEquipmentId(equipment.getId()).stream()
+                .anyMatch(b -> b.getUser().getEmail().equals(userEmail) && "PENDING".equals(b.getStatus()));
+
+        if (userHasPendingBooking) {
+            throw new RuntimeException("You already have a pending booking request for this equipment. Please wait for manager approval.");
+        }
+
         LocalDateTime newStart = request.getStartTime();
         LocalDateTime newEnd = request.getEndTime();
 
         if (newStart == null || newEnd == null || newEnd.isBefore(newStart) || newEnd.isEqual(newStart)) {
             throw new RuntimeException("Invalid booking start or end time");
+        }
+
+        // Prevent past start times
+        if (newStart.isBefore(LocalDateTime.now().minusMinutes(5))) {
+            throw new RuntimeException("Booking start time cannot be in the past.");
         }
 
         // Check for time slot overlap with existing APPROVED bookings

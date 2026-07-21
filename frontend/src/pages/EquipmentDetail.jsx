@@ -45,6 +45,7 @@ export default function EquipmentDetail() {
 
   const [equipment, setEquipment] = useState(null);
   const [activeBooking, setActiveBooking] = useState(null);
+  const [userPendingBooking, setUserPendingBooking] = useState(null);
   const [waitlistEntries, setWaitlistEntries] = useState([]);
   const [userWaitlistEntry, setUserWaitlistEntry] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -72,6 +73,21 @@ export default function EquipmentDetail() {
     loadBookings();
   }, [id]);
 
+  const getCurrentDateTimeLocal = () => {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  };
+
+  const getMinBookingStartTime = () => {
+    if (activeBooking?.endTime) {
+      const endTime = new Date(activeBooking.endTime);
+      endTime.setMinutes(endTime.getMinutes() - endTime.getTimezoneOffset());
+      return endTime.toISOString().slice(0, 16);
+    }
+    return getCurrentDateTimeLocal();
+  };
+
   const loadEquipment = async () => {
     try {
       const res = await api.get(`/equipment/${id}`);
@@ -90,8 +106,12 @@ export default function EquipmentDetail() {
       const list = Array.isArray(res.data) ? res.data : [];
       const approved = list.find(b => b.status === 'APPROVED');
       setActiveBooking(approved || null);
+
+      const pending = list.find(b => b.status === 'PENDING' && b.user?.email === user?.email);
+      setUserPendingBooking(pending || null);
     } catch {
       setActiveBooking(null);
+      setUserPendingBooking(null);
     }
   };
 
@@ -313,6 +333,21 @@ export default function EquipmentDetail() {
               </div>
             )}
 
+            {/* Pending Booking Banner for current user */}
+            {userPendingBooking && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3.5 flex items-start gap-3">
+                <Clock size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-xs uppercase font-bold tracking-wider text-amber-900">Pending Booking Request</h4>
+                  <p className="text-xs text-amber-800 mt-1">
+                    You already submitted a booking request for this equipment (from{' '}
+                    <span className="font-semibold">{new Date(userPendingBooking.startTime).toLocaleString()}</span> to{' '}
+                    <span className="font-semibold">{new Date(userPendingBooking.endTime).toLocaleString()}</span>). Awaiting manager approval.
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Waitlist Banner if user is on waitlist */}
             {userWaitlistEntry && (
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-center justify-between">
@@ -418,9 +453,18 @@ export default function EquipmentDetail() {
 
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4 border-t border-gray-200 flex-wrap">
-          {canBook && !isBeingUsed && (
+          {canBook && !isBeingUsed && !userPendingBooking && (
             <button
-              onClick={() => setShowBookForm(!showBookForm)}
+              onClick={() => {
+                setShowBookForm(!showBookForm);
+                if (!showBookForm) {
+                  setBookForm({
+                    startTime: getMinBookingStartTime(),
+                    endTime: '',
+                    purpose: '',
+                  });
+                }
+              }}
               className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 font-medium cursor-pointer transition-colors shadow-sm"
             >
               <Calendar size={16} />
@@ -487,16 +531,22 @@ export default function EquipmentDetail() {
       {/* Booking Form Modal */}
       {showBookForm && (
         <div className="mt-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Book Equipment</h3>
+          <h3 className="text-lg font-semibold text-gray-800 mb-2">Book Equipment</h3>
+          {activeBooking && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded mb-4">
+              Note: Equipment is currently booked until <span className="font-bold">{new Date(activeBooking.endTime).toLocaleString()}</span>. All earlier dates/times are disabled.
+            </p>
+          )}
           <form onSubmit={handleBook} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Start Time
+                  Start Time <span className="text-xs text-gray-400">(Previous dates dimmed)</span>
                 </label>
                 <input
                   type="datetime-local"
                   required
+                  min={getMinBookingStartTime()}
                   value={bookForm.startTime}
                   onChange={(e) => setBookForm({ ...bookForm, startTime: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -504,11 +554,12 @@ export default function EquipmentDetail() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  End Time
+                  End Time <span className="text-xs text-gray-400">(Must be after start time)</span>
                 </label>
                 <input
                   type="datetime-local"
                   required
+                  min={bookForm.startTime || getMinBookingStartTime()}
                   value={bookForm.endTime}
                   onChange={(e) => setBookForm({ ...bookForm, endTime: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -560,6 +611,7 @@ export default function EquipmentDetail() {
                 <input
                   type="date"
                   required
+                  min={getCurrentDateTimeLocal().slice(0, 10)}
                   value={maintForm.scheduledDate}
                   onChange={(e) => setMaintForm({ ...maintForm, scheduledDate: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
