@@ -21,16 +21,6 @@ public class EquipmentController {
     private final EquipmentService equipmentService;
     private final UserService userService;
 
-    private Integer getUserInstitutionId(User user) {
-        if (user.getInstitution() != null) {
-            return user.getInstitution().getId();
-        }
-        if (user.getDepartment() != null && user.getDepartment().getInstitution() != null) {
-            return user.getDepartment().getInstitution().getId();
-        }
-        return null;
-    }
-
     @GetMapping
     public ResponseEntity<List<Equipment>> getAllEquipment(
             @RequestParam(required = false) String status) {
@@ -38,10 +28,10 @@ public class EquipmentController {
         User currentUser = userService.findByEmail(email);
 
         List<Equipment> list;
-        if (currentUser.getRole().equals("STUDENT") || currentUser.getRole().equals("RESEARCHER")) {
-            Integer instId = getUserInstitutionId(currentUser);
-            if (instId != null) {
-                list = equipmentService.findByInstitutionId(instId);
+        if ("LAB_MANAGER".equals(currentUser.getRole())) {
+            // Lab Manager MUST ONLY see equipment belonging to their own lab/department
+            if (currentUser.getDepartment() != null) {
+                list = equipmentService.findByDepartmentId(currentUser.getDepartment().getId());
             } else {
                 list = List.of();
             }
@@ -62,14 +52,16 @@ public class EquipmentController {
             String email = SecurityContextHolder.getContext().getAuthentication().getName();
             User currentUser = userService.findByEmail(email);
 
-            if (currentUser.getRole().equals("STUDENT") || currentUser.getRole().equals("RESEARCHER")) {
-                Integer userInstId = getUserInstitutionId(currentUser);
-                Integer eqInstId = (eq.getDepartment() != null && eq.getDepartment().getInstitution() != null)
-                        ? eq.getDepartment().getInstitution().getId() : null;
-
-                if (userInstId == null || !userInstId.equals(eqInstId)) {
-                    return ResponseEntity.status(403).build(); // Block viewing equipment of other colleges
+            if ("LAB_MANAGER".equals(currentUser.getRole())) {
+                if (currentUser.getDepartment() == null || 
+                    eq.getDepartment() == null || 
+                    !currentUser.getDepartment().getId().equals(eq.getDepartment().getId())) {
+                    return ResponseEntity.status(403).build(); // Block viewing equipment of other labs
                 }
+            }
+
+            if (currentUser.getRole().equals("STUDENT") && Boolean.TRUE.equals(eq.getIsRestricted())) {
+                return ResponseEntity.status(403).build();
             }
 
             return ResponseEntity.ok(eq);

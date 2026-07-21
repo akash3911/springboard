@@ -16,8 +16,12 @@ import {
 const allLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: 'ALL' },
   { to: '/equipment', label: 'Equipment', icon: Monitor, roles: 'ALL' },
-  { to: '/bookings', label: 'Bookings', icon: CalendarDays, roles: 'ALL' },
-  { to: '/notifications', label: 'Notifications', icon: Bell, roles: 'ALL' },
+  {
+    to: '/bookings',
+    label: 'Bookings',
+    icon: CalendarDays,
+    roles: ['STUDENT', 'RESEARCHER', 'LAB_MANAGER', 'SYSTEM_ADMIN'],
+  },
   {
     to: '/waitlist',
     label: 'Waitlist',
@@ -28,19 +32,19 @@ const allLinks = [
     to: '/maintenance',
     label: 'Maintenance',
     icon: Wrench,
-    roles: ['LAB_TECHNICIAN', 'LAB_MANAGER'],
-  },
-  {
-    to: '/users',
-    label: 'Users',
-    icon: Users,
-    roles: ['LAB_MANAGER', 'DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN'],
+    roles: ['LAB_TECHNICIAN', 'LAB_MANAGER', 'SYSTEM_ADMIN'],
   },
   {
     to: '/analytics',
     label: 'Analytics',
     icon: BarChart3,
     roles: ['DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN'],
+  },
+  {
+    to: '/users',
+    label: 'Users',
+    icon: Users,
+    roles: ['INSTITUTION_HEAD', 'SYSTEM_ADMIN'],
   },
   {
     to: '/departments',
@@ -54,6 +58,7 @@ const allLinks = [
     icon: Landmark,
     roles: ['SYSTEM_ADMIN'],
   },
+  { to: '/notifications', label: 'Notifications', icon: Bell, roles: 'ALL' },
 ];
 
 export default function Sidebar() {

@@ -3,24 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Building2 } from 'lucide-react';
 
 const statusColors = {
-  AVAILABLE: 'bg-green-100 text-green-700',
-  BOOKED: 'bg-blue-100 text-blue-700',
-  UNDER_MAINTENANCE: 'bg-yellow-100 text-yellow-700',
-  OUT_OF_SERVICE: 'bg-red-100 text-red-700',
+  AVAILABLE: 'bg-green-100 text-green-700 border border-green-200',
+  BOOKED: 'bg-blue-100 text-blue-700 border border-blue-200',
+  BOOKING_PENDING: 'bg-amber-100 text-amber-800 border border-amber-200',
+  UNDER_MAINTENANCE: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
+  OUT_OF_SERVICE: 'bg-red-100 text-red-700 border border-red-200',
 };
-
-
 
 export default function Equipment() {
   const { user } = { user: JSON.parse(localStorage.getItem('user')) }; // Get fresh user state
   const navigate = useNavigate();
   const [equipment, setEquipment] = useState([]);
+  const [institutions, setInstitutions] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+  const [institutionFilter, setInstitutionFilter] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [categories, setCategories] = useState([]);
   const [departments, setDepartments] = useState([]);
@@ -36,17 +37,17 @@ export default function Equipment() {
     purchaseDate: '',
     specifications: '',
     description: '',
-    isShared: false,
+    isShared: true,
     isRestricted: false,
     departmentId: user?.role === 'LAB_MANAGER' ? user?.department?.id || '' : '',
   });
 
+  const isLabManager = user?.role === 'LAB_MANAGER';
   const canManage = ['LAB_MANAGER', 'DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN'].includes(user?.role);
-  const hideTagsRoles = ['STUDENT', 'RESEARCHER'];
-  const showTags = !hideTagsRoles.includes(user?.role);
 
   useEffect(() => {
     loadEquipment();
+    loadInstitutions();
     if (canManage) {
       loadDepartments();
     }
@@ -63,13 +64,19 @@ export default function Equipment() {
     }
   };
 
+  const loadInstitutions = async () => {
+    try {
+      const res = await api.get('/institutions');
+      setInstitutions(Array.isArray(res.data) ? res.data : []);
+    } catch {
+      setInstitutions([]);
+    }
+  };
+
   const loadDepartments = async () => {
     try {
       const res = await api.get('/departments');
-      // If Lab Manager, limit departments to their own department
-      if (user?.role === 'LAB_MANAGER') {
-        setDepartments(res.data.filter(d => d.id === user?.department?.id));
-      } else if (user?.role === 'DEPARTMENT_HEAD') {
+      if (user?.role === 'LAB_MANAGER' || user?.role === 'DEPARTMENT_HEAD') {
         setDepartments(res.data.filter(d => d.id === user?.department?.id));
       } else if (user?.role === 'INSTITUTION_HEAD') {
         setDepartments(res.data.filter(d => d.institution?.id === user?.department?.institution?.id));
@@ -103,7 +110,7 @@ export default function Equipment() {
         purchaseDate: '',
         specifications: '',
         description: '',
-        isShared: false,
+        isShared: true,
         isRestricted: false,
         departmentId: user?.role === 'LAB_MANAGER' ? user?.department?.id || '' : '',
       });
@@ -114,53 +121,48 @@ export default function Equipment() {
   };
 
   const filtered = equipment.filter((e) => {
-    const userInstId = user?.institution?.id || user?.department?.institution?.id;
-    const eqInstId = e.department?.institution?.id;
-
-    // 1. Role-based visibility rules
-    if (user?.role === 'STUDENT') {
-      // Students can ONLY view equipment in their own college (institution)
-      if (eqInstId !== userInstId) return false;
-      // Cannot access restricted equipment
-      if (e.isRestricted) return false;
-    } else if (user?.role === 'RESEARCHER') {
-      // Researchers can view equipment in their OWN institution
-      const isSameInst = eqInstId === userInstId;
-      // Researchers can view external (other institution) equipment ONLY if it is marked as shared
-      const isShared = e.isShared;
-      if (!isSameInst && !isShared) return false;
-    } else if (user?.role === 'LAB_TECHNICIAN') {
-      // Techs view in their institution
-      if (eqInstId !== userInstId) return false;
-    } else if (user?.role === 'LAB_MANAGER') {
-      // Lab managers can view equipment in their institution
-      if (eqInstId !== userInstId) return false;
-    } else if (user?.role === 'DEPARTMENT_HEAD') {
-      // Dept heads view all department equipment
+    // Lab Manager strictly sees ONLY equipment in their lab
+    if (isLabManager) {
       if (e.department?.id !== user?.department?.id) return false;
-    } else if (user?.role === 'INSTITUTION_HEAD') {
-      // Inst heads view all equipment in their institution
-      if (eqInstId !== userInstId) return false;
     }
-    // SYSTEM_ADMIN sees everything
+
+    // Hide restricted equipment from students
+    if (user?.role === 'STUDENT' && e.isRestricted) {
+      return false;
+    }
 
     const matchSearch =
       !search ||
       e.name?.toLowerCase().includes(search.toLowerCase()) ||
-      e.model?.toLowerCase().includes(search.toLowerCase());
+      e.model?.toLowerCase().includes(search.toLowerCase()) ||
+      e.manufacturer?.toLowerCase().includes(search.toLowerCase());
+
     const matchStatus = !statusFilter || e.status === statusFilter;
     const matchCategory = !categoryFilter || e.category === categoryFilter;
-    return matchSearch && matchStatus && matchCategory;
+    
+    const eqInstId = e.department?.institution?.id;
+    const matchInstitution = !institutionFilter || eqInstId === Number(institutionFilter);
+
+    return matchSearch && matchStatus && matchCategory && matchInstitution;
   });
 
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Equipment</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">
+            {isLabManager ? 'My Lab Equipment' : 'Equipment Catalog'}
+          </h2>
+          <p className="text-xs text-gray-500 mt-0.5">
+            {isLabManager
+              ? 'Manage inventory, status, and maintenance for your laboratory equipment'
+              : 'Explore and book shared research equipment across all partner institutions'}
+          </p>
+        </div>
         {canManage && (
           <button
             onClick={() => setShowAddForm(!showAddForm)}
-            className="flex items-center gap-1 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+            className="flex items-center gap-1 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-medium cursor-pointer"
           >
             <Plus size={16} />
             Add Equipment
@@ -169,191 +171,199 @@ export default function Equipment() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-3 mb-6">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-wrap gap-3 mb-6">
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search size={16} className="absolute left-3 top-2.5 text-gray-400" />
           <input
             type="text"
-            placeholder="Search by name or model..."
+            placeholder="Search equipment, model..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All Status</option>
-          <option value="AVAILABLE">Available</option>
-          <option value="BOOKED">Booked</option>
-          <option value="UNDER_MAINTENANCE">Under Maintenance</option>
-          <option value="OUT_OF_SERVICE">Out of Service</option>
-        </select>
+
+        {/* Institution Filter (Hidden for Lab Manager) */}
+        {!isLabManager && (
+          <select
+            value={institutionFilter}
+            onChange={(e) => setInstitutionFilter(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+          >
+            <option value="">All Colleges & Institutions</option>
+            {institutions.map((inst) => (
+              <option key={inst.id} value={inst.id}>
+                {inst.name}
+              </option>
+            ))}
+          </select>
+        )}
+
+        {/* Category Filter */}
         <select
           value={categoryFilter}
           onChange={(e) => setCategoryFilter(e.target.value)}
-          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
           <option value="">All Categories</option>
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>
+              {cat}
             </option>
           ))}
         </select>
+
+        {/* Status Filter */}
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+        >
+          <option value="">All Statuses</option>
+          <option value="AVAILABLE">AVAILABLE</option>
+          <option value="BOOKING_PENDING">BOOKING PENDING</option>
+          <option value="BOOKED">BOOKED</option>
+          <option value="UNDER_MAINTENANCE">UNDER MAINTENANCE</option>
+          <option value="OUT_OF_SERVICE">OUT OF SERVICE</option>
+        </select>
       </div>
 
-      {/* Add Equipment Form */}
+      {/* Add Form Modal */}
       {showAddForm && (
-        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6">
-          <h3 className="text-lg font-semibold mb-3">Add New Equipment</h3>
-          <form onSubmit={handleAdd} className="grid grid-cols-2 gap-4">
+        <div className="bg-white border border-gray-200 rounded-lg p-4 mb-6 shadow-sm">
+          <h3 className="font-semibold text-gray-800 mb-3">Add New Equipment</h3>
+          <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Name</label>
               <input
                 type="text"
+                required
                 value={addForm.name}
                 onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                required
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Category</label>
               <input
                 type="text"
+                required
+                placeholder="e.g. Fabrication, Optics, Biology"
                 value={addForm.category}
                 onChange={(e) => setAddForm({ ...addForm, category: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Manufacturer</label>
               <input
                 type="text"
+                required
                 value={addForm.manufacturer}
                 onChange={(e) => setAddForm({ ...addForm, manufacturer: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Model</label>
               <input
                 type="text"
+                required
                 value={addForm.model}
                 onChange={(e) => setAddForm({ ...addForm, model: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Serial Number</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Serial Number</label>
               <input
                 type="text"
                 value={addForm.serialNumber}
                 onChange={(e) => setAddForm({ ...addForm, serialNumber: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Room Number</label>
               <input
                 type="text"
                 value={addForm.roomNumber}
                 onChange={(e) => setAddForm({ ...addForm, roomNumber: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Contact Email</label>
               <input
                 type="email"
                 value={addForm.contactEmail}
                 onChange={(e) => setAddForm({ ...addForm, contactEmail: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Date</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Department</label>
+              <select
+                value={addForm.departmentId}
+                onChange={(e) => setAddForm({ ...addForm, departmentId: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white"
+              >
+                <option value="">Select Department</option>
+                {departments.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.institution?.name})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Image URL</label>
+              <input
+                type="text"
+                placeholder="https://..."
+                value={addForm.imageUrl || ''}
+                onChange={(e) => setAddForm({ ...addForm, imageUrl: e.target.value })}
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Purchase Date</label>
               <input
                 type="date"
                 value={addForm.purchaseDate}
                 onChange={(e) => setAddForm({ ...addForm, purchaseDate: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Department *</label>
-              {user?.role === 'LAB_MANAGER' ? (
-                <div className="w-full bg-gray-100 border border-gray-300 rounded px-3 py-2 text-sm text-gray-700 font-medium">
-                  {user?.department?.name}
-                </div>
-              ) : (
-                <select
-                  value={addForm.departmentId}
-                  onChange={(e) => setAddForm({ ...addForm, departmentId: e.target.value })}
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                  required
-                >
-                  <option value="">Select Department</option>
-                  {departments.map((d) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name} ({d.institution?.name})
-                    </option>
-                  ))}
-                </select>
-              )}
-            </div>
-            <div className="flex items-center gap-4 mt-6">
-              <label className="flex items-center gap-2 text-sm text-gray-700 font-medium">
-                <input
-                  type="checkbox"
-                  checked={addForm.isRestricted}
-                  onChange={(e) => setAddForm({ ...addForm, isRestricted: e.target.checked })}
-                  className="rounded border-gray-300"
-                />
-                Restricted Equipment
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700 font-medium">
-                <input
-                  type="checkbox"
-                  checked={addForm.isShared}
-                  onChange={(e) => setAddForm({ ...addForm, isShared: e.target.checked })}
-                  className="rounded border-gray-300"
-                />
-                Shared (Inter-Institution)
-              </label>
-            </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Specifications</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Specifications</label>
               <textarea
                 value={addForm.specifications}
                 onChange={(e) => setAddForm({ ...addForm, specifications: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
                 rows={2}
               />
             </div>
             <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+              <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
               <textarea
                 value={addForm.description}
                 onChange={(e) => setAddForm({ ...addForm, description: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm"
                 rows={2}
               />
             </div>
-            <div className="col-span-2 flex gap-2">
+            <div className="col-span-2 flex gap-2 pt-2">
               <button
                 type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700"
+                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-medium"
               >
                 Add Equipment
               </button>
               <button
                 type="button"
                 onClick={() => setShowAddForm(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300"
+                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300 font-medium"
               >
                 Cancel
               </button>
@@ -365,7 +375,8 @@ export default function Equipment() {
       {/* Equipment Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((eq) => {
-          const isExternal = eq.department?.institution?.id !== (user?.institution?.id || user?.department?.institution?.id);
+          const instName = eq.department?.institution?.name || 'Partner College';
+
           return (
             <div
               key={eq.id}
@@ -374,45 +385,31 @@ export default function Equipment() {
             >
               <div>
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-gray-800 text-base">{eq.name}</h3>
+                  <div>
+                    <h3 className="font-semibold text-gray-800 text-base">{eq.name}</h3>
+                    <p className="text-xs font-medium text-blue-600 flex items-center gap-1 mt-0.5">
+                      <Building2 size={12} />
+                      {instName}
+                    </p>
+                  </div>
                   <span
-                    className={`text-xs px-2.5 py-1 rounded-full ${
+                    className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                       statusColors[eq.status] || 'bg-gray-100 text-gray-600'
                     }`}
                   >
-                    {eq.status?.replace(/_/g, ' ')}
+                    {eq.status === 'BOOKING_PENDING' ? 'BOOKING PENDING' : eq.status?.replace(/_/g, ' ')}
                   </span>
                 </div>
-                <p className="text-sm text-gray-500 mb-1">Model: {eq.model || 'N/A'}</p>
-                <p className="text-sm text-gray-500 mb-2">Room: {eq.roomNumber || 'N/A'}</p>
+                <p className="text-xs text-gray-500 mb-1">Model: {eq.model || 'N/A'}</p>
+                <p className="text-xs text-gray-500">Room: {eq.roomNumber || 'N/A'}</p>
               </div>
-
-              {showTags && (
-                <div className="flex flex-wrap gap-1 mt-2 pt-2 border-t border-gray-100">
-                  {eq.isRestricted && (
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 border border-red-200">
-                      Restricted
-                    </span>
-                  )}
-                  {eq.isShared && (
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-200">
-                      Shared
-                    </span>
-                  )}
-                  {isExternal && (
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-orange-50 text-orange-600 border border-orange-200">
-                      External ({eq.department?.institution?.name})
-                    </span>
-                  )}
-                </div>
-              )}
             </div>
           );
         })}
       </div>
 
       {filtered.length === 0 && (
-        <p className="text-center text-gray-500 mt-8">No equipment found</p>
+        <p className="text-center text-gray-500 mt-8">No equipment found matching criteria</p>
       )}
     </div>
   );

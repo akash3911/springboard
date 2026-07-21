@@ -1,5 +1,6 @@
 package com.labproject.controller;
 
+import com.labproject.dto.WaitlistRequest;
 import com.labproject.entity.Waitlist;
 import com.labproject.service.WaitlistService;
 import lombok.RequiredArgsConstructor;
@@ -25,14 +26,23 @@ public class WaitlistController {
     }
 
     @PostMapping
-    public ResponseEntity<?> joinWaitlist(@RequestBody Map<String, Integer> body) {
+    public ResponseEntity<?> joinWaitlist(@RequestBody WaitlistRequest request) {
         try {
-            Integer equipmentId = body.get("equipmentId");
-            if (equipmentId == null) {
+            if (request.getEquipmentId() == null) {
                 return ResponseEntity.badRequest().body(Map.of("message", "equipmentId is required"));
             }
             String email = SecurityContextHolder.getContext().getAuthentication().getName();
-            return ResponseEntity.ok(waitlistService.joinWaitlist(equipmentId, email));
+            return ResponseEntity.ok(waitlistService.joinWaitlist(request, email));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<?> approveWaitlist(@PathVariable Integer id) {
+        try {
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            return ResponseEntity.ok(waitlistService.approveWaitlist(id, email));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

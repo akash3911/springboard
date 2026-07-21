@@ -1,6 +1,7 @@
 package com.labproject.service;
 
 import com.labproject.dto.EquipmentRequest;
+import com.labproject.entity.Booking;
 import com.labproject.entity.Department;
 import com.labproject.entity.Equipment;
 import com.labproject.repository.BookingRepository;
@@ -71,13 +72,21 @@ public class EquipmentService {
             return equipment;
         }
 
-        boolean hasApprovedBooking = bookingRepository.findByEquipmentId(equipment.getId()).stream()
+        List<Booking> bookings = bookingRepository.findByEquipmentId(equipment.getId());
+
+        boolean hasApproved = bookings.stream()
                 .anyMatch(b -> "APPROVED".equals(b.getStatus()));
 
-        if (hasApprovedBooking && !"BOOKED".equals(equipment.getStatus())) {
+        boolean hasPending = bookings.stream()
+                .anyMatch(b -> "PENDING".equals(b.getStatus()));
+
+        if (hasApproved && !"BOOKED".equals(equipment.getStatus())) {
             equipment.setStatus("BOOKED");
             return equipmentRepository.save(equipment);
-        } else if (!hasApprovedBooking && "BOOKED".equals(equipment.getStatus())) {
+        } else if (!hasApproved && hasPending && !"BOOKING_PENDING".equals(equipment.getStatus())) {
+            equipment.setStatus("BOOKING_PENDING");
+            return equipmentRepository.save(equipment);
+        } else if (!hasApproved && !hasPending && ("BOOKED".equals(equipment.getStatus()) || "BOOKING_PENDING".equals(equipment.getStatus()))) {
             equipment.setStatus("AVAILABLE");
             return equipmentRepository.save(equipment);
         }

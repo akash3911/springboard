@@ -1,8 +1,11 @@
 package com.labproject.service;
 
+import com.labproject.dto.WaitlistRequest;
+import com.labproject.entity.Booking;
 import com.labproject.entity.Equipment;
 import com.labproject.entity.User;
 import com.labproject.entity.Waitlist;
+import com.labproject.repository.BookingRepository;
 import com.labproject.repository.EquipmentRepository;
 import com.labproject.repository.UserRepository;
 import com.labproject.repository.WaitlistRepository;
@@ -19,27 +22,20 @@ public class WaitlistService {
     private final WaitlistRepository waitlistRepository;
     private final EquipmentRepository equipmentRepository;
     private final UserRepository userRepository;
+    private final BookingRepository bookingRepository;
 
-    public Waitlist joinWaitlist(Integer equipmentId, String userEmail) {
+    public Waitlist joinWaitlist(WaitlistRequest request, String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Equipment equipment = equipmentRepository.findById(equipmentId)
+        Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
                 .orElseThrow(() -> new RuntimeException("Equipment not found"));
 
-        if (user.getRole().equals("STUDENT") || user.getRole().equals("RESEARCHER")) {
-            Integer userInstId = user.getInstitution() != null ? user.getInstitution().getId() : 
-                                 (user.getDepartment() != null && user.getDepartment().getInstitution() != null ? 
-                                  user.getDepartment().getInstitution().getId() : null);
-            Integer eqInstId = (equipment.getDepartment() != null && equipment.getDepartment().getInstitution() != null)
-                    ? equipment.getDepartment().getInstitution().getId() : null;
-
-            if (userInstId == null || !userInstId.equals(eqInstId)) {
-                throw new RuntimeException("You can only join waitlists within your own college");
-            }
+        if (user.getRole().equals("STUDENT") && Boolean.TRUE.equals(equipment.getIsRestricted())) {
+            throw new RuntimeException("This equipment has restricted access and cannot be waitlisted by students.");
         }
 
-        boolean alreadyOnWaitlist = waitlistRepository.findByEquipmentId(equipmentId).stream()
+        boolean alreadyOnWaitlist = waitlistRepository.findByEquipmentId(request.getEquipmentId()).stream()
                 .anyMatch(w -> w.getUser().getId().equals(user.getId()) && "PENDING".equals(w.getStatus()));
         if (alreadyOnWaitlist) {
             throw new RuntimeException("You are already on the active waitlist for this equipment");
@@ -49,9 +45,36 @@ public class WaitlistService {
         waitlist.setEquipment(equipment);
         waitlist.setUser(user);
         waitlist.setRequestTime(LocalDateTime.now());
+        waitlist.setStartTime(request.getStartTime());
+        waitlist.setEndTime(request.getEndTime());
         waitlist.setStatus("PENDING");
 
         return waitlistRepository.save(waitlist);
+    }
+
+    public Booking approveWaitlist(Integer waitlistId, String userEmail) {
+        Waitlist waitlist = waitlistRepository.findById(waitlistId)
+                .orElseThrow(() -> new RuntimeException("Waitlist entry not found"));
+
+        Equipment equipment = waitlist.getEquipment();
+
+        Booking booking = new Booking();
+        booking.setEquipment(equipment);
+        booking.setUser(waitlist.getUser());
+        booking.setStartTime(waitlist.getStartTime() != null ? waitlist.getStartTime() : LocalDateTime.now());
+        booking.setEndTime(waitlist.getEndTime() != null ? waitlist.getEndTime() : LocalDateTime.now().plusDays(1));
+        booking.setPurpose("Promoted from Waitlist");
+        booking.setStatus("APPROVED");
+
+        Booking savedBooking = bookingRepository.save(booking);
+
+        waitlist.setStatus("APPROVED");
+        waitlistRepository.save(waitlist);
+
+        equipment.setStatus("BOOKED");
+        equipmentRepository.save(equipment);
+
+        return savedBooking;
     }
 
     public void cancelWaitlist(Integer id, String userEmail) {
@@ -76,23 +99,8 @@ public class WaitlistService {
         User currentUser = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        if ("SYSTEM_ADMIN".equals(currentUser.getRole())) {
+        if (List.of("SYSTEM_ADMIN", "INSTITUTION_HEAD", "DEPARTMENT_HEAD", "LAB_MANAGER").contains(currentUser.getRole())) {
             return waitlistRepository.findAll();
-        } else if (List.of("LAB_MANAGER", "DEPARTMENT_HEAD", "INSTITUTION_HEAD").contains(currentUser.getRole())) {
-            Integer userInstId = currentUser.getInstitution() != null ? currentUser.getInstitution().getId() :
-                    (currentUser.getDepartment() != null && currentUser.getDepartment().getInstitution() != null ?
-                     currentUser.getDepartment().getInstitution().getId() : null);
-            if (userInstId == null) {
-                return List.of();
-            }
-            return waitlistRepository.findAll().stream()
-                    .filter(w -> {
-                        Integer eqInstId = (w.getEquipment() != null && w.getEquipment().getDepartment() != null &&
-                                w.getEquipment().getDepartment().getInstitution() != null)
-                                ? w.getEquipment().getDepartment().getInstitution().getId() : null;
-                        return userInstId.equals(eqInstId);
-                    })
-                    .toList();
         } else {
             return waitlistRepository.findByUserId(currentUser.getId());
         }

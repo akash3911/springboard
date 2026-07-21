@@ -12,12 +12,13 @@ import {
   Clock,
   UserCheck,
   CheckCircle2,
-  AlertCircle,
+  Building2,
 } from 'lucide-react';
 
 const statusColors = {
   AVAILABLE: 'bg-green-100 text-green-700 border border-green-200',
   BOOKED: 'bg-blue-100 text-blue-700 border border-blue-200',
+  BOOKING_PENDING: 'bg-amber-100 text-amber-800 border border-amber-200',
   UNDER_MAINTENANCE: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
   OUT_OF_SERVICE: 'bg-red-100 text-red-700 border border-red-200',
 };
@@ -46,10 +47,12 @@ export default function EquipmentDetail() {
   const [equipment, setEquipment] = useState(null);
   const [activeBooking, setActiveBooking] = useState(null);
   const [userPendingBooking, setUserPendingBooking] = useState(null);
+  const [anyPendingBooking, setAnyPendingBooking] = useState(null);
   const [waitlistEntries, setWaitlistEntries] = useState([]);
   const [userWaitlistEntry, setUserWaitlistEntry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showBookForm, setShowBookForm] = useState(false);
+  const [showWaitlistForm, setShowWaitlistForm] = useState(false);
   const [showMaintenanceForm, setShowMaintenanceForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
   const [technicians, setTechnicians] = useState([]);
@@ -57,6 +60,10 @@ export default function EquipmentDetail() {
     startTime: '',
     endTime: '',
     purpose: '',
+  });
+  const [waitlistForm, setWaitlistForm] = useState({
+    startTime: '',
+    endTime: '',
   });
   const [maintForm, setMaintForm] = useState({
     scheduledDate: '',
@@ -109,9 +116,13 @@ export default function EquipmentDetail() {
 
       const pending = list.find(b => b.status === 'PENDING' && b.user?.email === user?.email);
       setUserPendingBooking(pending || null);
+
+      const firstPending = list.find(b => b.status === 'PENDING');
+      setAnyPendingBooking(firstPending || null);
     } catch {
       setActiveBooking(null);
       setUserPendingBooking(null);
+      setAnyPendingBooking(null);
     }
   };
 
@@ -130,13 +141,11 @@ export default function EquipmentDetail() {
   const isOwnDept = equipment && user && user.department?.id && equipment.department?.id === user.department?.id;
   const isOwnInst = equipment && user && equipment.department?.institution?.id === (user.institution?.id || user.department?.institution?.id);
 
-  // Enforce precise Student/Researcher access checks
-  const isStudentBlocked = role === 'STUDENT' && (!isOwnInst || equipment?.isRestricted);
-  const isResearcherBlocked = role === 'RESEARCHER' && (!isOwnInst && !equipment?.isShared);
+  const isStudentBlocked = role === 'STUDENT' && Boolean(equipment?.isRestricted);
 
-  const canBook = ['STUDENT', 'RESEARCHER', 'LAB_MANAGER'].includes(role) && 
-                    (role === 'STUDENT' ? isOwnInst && !equipment?.isRestricted :
-                     role === 'RESEARCHER' ? (isOwnInst || equipment?.isShared) : true);
+  // Managers cannot book or join waitlists (only Students & Researchers can)
+  const canBook = ['STUDENT', 'RESEARCHER'].includes(role) && !isStudentBlocked;
+  const canJoinWaitlist = ['STUDENT', 'RESEARCHER'].includes(role) && !isStudentBlocked;
 
   const canEdit = (role === 'LAB_MANAGER' && isOwnDept) || 
                   (role === 'DEPARTMENT_HEAD' && isOwnDept) || 
@@ -146,12 +155,8 @@ export default function EquipmentDetail() {
   const canDelete = canEdit;
 
   const canScheduleMaint = (role === 'LAB_MANAGER' && isOwnDept);
-  
-  const canJoinWaitlist = ['STUDENT', 'RESEARCHER', 'LAB_MANAGER'].includes(role) && 
-                          (role === 'STUDENT' ? isOwnInst && !equipment?.isRestricted :
-                           role === 'RESEARCHER' ? (isOwnInst || equipment?.isShared) : true);
 
-  const isBeingUsed = equipment?.status === 'BOOKED' || equipment?.status === 'UNDER_MAINTENANCE' || Boolean(activeBooking);
+  const isBeingUsed = equipment?.status === 'BOOKED' || equipment?.status === 'BOOKING_PENDING' || equipment?.status === 'UNDER_MAINTENANCE' || Boolean(activeBooking) || Boolean(anyPendingBooking);
 
   const handleBook = async (e) => {
     e.preventDefault();
@@ -172,10 +177,17 @@ export default function EquipmentDetail() {
     }
   };
 
-  const handleJoinWaitlist = async () => {
+  const handleJoinWaitlist = async (e) => {
+    e.preventDefault();
     try {
-      await api.post('/waitlist', { equipmentId: Number(id) });
+      await api.post('/waitlist', {
+        equipmentId: Number(id),
+        startTime: waitlistForm.startTime,
+        endTime: waitlistForm.endTime,
+      });
       toast.success('Successfully joined waitlist!');
+      setShowWaitlistForm(false);
+      setWaitlistForm({ startTime: '', endTime: '' });
       loadWaitlist();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to join waitlist');
@@ -251,11 +263,11 @@ export default function EquipmentDetail() {
   if (loading) return <p className="text-gray-500 py-8 text-center">Loading equipment details...</p>;
   if (!equipment) return <p className="text-gray-500 py-8 text-center">Equipment not found</p>;
 
-  if (isStudentBlocked || isResearcherBlocked) {
+  if (isStudentBlocked) {
     return (
       <div className="bg-red-50 border border-red-200 rounded-lg p-6 text-red-700">
         <h3 className="font-bold text-lg mb-2">Access Denied</h3>
-        <p>You do not have the required permissions to view this restricted or department-specific equipment.</p>
+        <p>You do not have the required permissions to view this restricted equipment.</p>
         <button onClick={() => navigate('/equipment')} className="mt-4 text-blue-600 font-medium hover:underline flex items-center gap-1">
           <ArrowLeft size={16} /> Back to Catalog
         </button>
@@ -263,9 +275,7 @@ export default function EquipmentDetail() {
     );
   }
 
-  const isExternal = equipment.department?.institution?.id !== (user?.institution?.id || user?.department?.institution?.id);
-  const hideTagsRoles = ['STUDENT', 'RESEARCHER'];
-  const showTags = !hideTagsRoles.includes(role);
+  const instName = equipment.department?.institution?.name || 'Partner College';
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -281,9 +291,15 @@ export default function EquipmentDetail() {
         {/* Header */}
         <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-100">
           <div>
-            <span className="text-xs uppercase tracking-wider font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded">
-              {equipment.category}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs uppercase tracking-wider font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded">
+                {equipment.category}
+              </span>
+              <span className="text-xs font-medium text-gray-600 bg-gray-100 px-2.5 py-1 rounded flex items-center gap-1">
+                <Building2 size={12} />
+                {instName}
+              </span>
+            </div>
             <h1 className="text-2xl font-bold text-gray-800 mt-2">{equipment.name}</h1>
             <p className="text-gray-500 text-sm">{equipment.manufacturer} — {equipment.model}</p>
           </div>
@@ -292,7 +308,7 @@ export default function EquipmentDetail() {
               statusColors[equipment.status] || 'bg-gray-100 text-gray-600'
             }`}
           >
-            {equipment.status?.replace(/_/g, ' ')}
+            {equipment.status === 'BOOKING_PENDING' ? 'BOOKING PENDING' : equipment.status?.replace(/_/g, ' ')}
           </span>
         </div>
 
@@ -320,9 +336,7 @@ export default function EquipmentDetail() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-3.5 flex items-start gap-3">
                 <Calendar size={20} className="text-blue-600 shrink-0 mt-0.5" />
                 <div className="w-full">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-xs uppercase font-bold tracking-wider text-blue-900">Currently Booked & Approved</h4>
-                  </div>
+                  <h4 className="text-xs uppercase font-bold tracking-wider text-blue-900">Currently Booked & Approved</h4>
                   <p className="text-xs text-blue-800 mt-1">
                     Booked by <span className="font-semibold text-blue-950">{activeBooking.user?.name || 'User'}</span> ({activeBooking.user?.email})
                   </p>
@@ -343,6 +357,19 @@ export default function EquipmentDetail() {
                     You already submitted a booking request for this equipment (from{' '}
                     <span className="font-semibold">{new Date(userPendingBooking.startTime).toLocaleString()}</span> to{' '}
                     <span className="font-semibold">{new Date(userPendingBooking.endTime).toLocaleString()}</span>). Awaiting manager approval.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Pending Booking Banner for other user */}
+            {!userPendingBooking && anyPendingBooking && !activeBooking && (
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3.5 flex items-start gap-3">
+                <Clock size={20} className="text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-xs uppercase font-bold tracking-wider text-amber-900">Booking Request Pending</h4>
+                  <p className="text-xs text-amber-800 mt-1">
+                    Another user has submitted a booking request for this equipment awaiting manager approval. You can join the waitlist below.
                   </p>
                 </div>
               </div>
@@ -396,7 +423,7 @@ export default function EquipmentDetail() {
               <div>
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Department & College</p>
                 <p className="font-medium text-gray-800">
-                  {equipment.department?.name || 'N/A'} ({equipment.department?.institution?.name || 'N/A'})
+                  {equipment.department?.name || 'N/A'} ({instName})
                 </p>
               </div>
               <div>
@@ -407,29 +434,6 @@ export default function EquipmentDetail() {
                 </p>
               </div>
             </div>
-
-            {showTags && (
-              <div>
-                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Access Tags</p>
-                <div className="flex gap-2 flex-wrap">
-                  {equipment.isRestricted && (
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-medium">
-                      Restricted Access
-                    </span>
-                  )}
-                  {equipment.isShared && (
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-medium">
-                      Inter-College Shared
-                    </span>
-                  )}
-                  {isExternal && (
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 font-medium">
-                      External Institution
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </div>
 
@@ -472,10 +476,18 @@ export default function EquipmentDetail() {
             </button>
           )}
 
-          {/* Join Waitlist shown ONLY when equipment is currently being used by someone / booked */}
+          {/* Join Waitlist shown ONLY when equipment is currently being used by someone / booked / booking pending */}
           {canJoinWaitlist && isBeingUsed && !userWaitlistEntry && (
             <button
-              onClick={handleJoinWaitlist}
+              onClick={() => {
+                setShowWaitlistForm(!showWaitlistForm);
+                if (!showWaitlistForm) {
+                  setWaitlistForm({
+                    startTime: getMinBookingStartTime(),
+                    endTime: '',
+                  });
+                }
+              }}
               className="flex items-center gap-1.5 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 font-medium cursor-pointer transition-colors shadow-sm"
             >
               <Clock size={16} />
@@ -532,11 +544,6 @@ export default function EquipmentDetail() {
       {showBookForm && (
         <div className="mt-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Book Equipment</h3>
-          {activeBooking && (
-            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded mb-4">
-              Note: Equipment is currently booked until <span className="font-bold">{new Date(activeBooking.endTime).toLocaleString()}</span>. All earlier dates/times are disabled.
-            </p>
-          )}
           <form onSubmit={handleBook} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -546,7 +553,7 @@ export default function EquipmentDetail() {
                 <input
                   type="datetime-local"
                   required
-                  min={getMinBookingStartTime()}
+                  min={getCurrentDateTimeLocal()}
                   value={bookForm.startTime}
                   onChange={(e) => setBookForm({ ...bookForm, startTime: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -559,7 +566,7 @@ export default function EquipmentDetail() {
                 <input
                   type="datetime-local"
                   required
-                  min={bookForm.startTime || getMinBookingStartTime()}
+                  min={bookForm.startTime || getCurrentDateTimeLocal()}
                   value={bookForm.endTime}
                   onChange={(e) => setBookForm({ ...bookForm, endTime: e.target.value })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -591,7 +598,64 @@ export default function EquipmentDetail() {
                 type="submit"
                 className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
               >
-                Submit Booking
+                Submit Booking Request
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      {/* Waitlist Form Modal (with start/end time selection dimmed prior to current user endtime) */}
+      {showWaitlistForm && (
+        <div className="mt-4 bg-white border border-purple-200 rounded-xl p-5 shadow-sm bg-purple-50/40">
+          <h3 className="text-lg font-semibold text-purple-900 mb-1">Join Equipment Waitlist</h3>
+          {activeBooking && (
+            <p className="text-xs text-purple-800 bg-purple-100/70 border border-purple-200 p-2.5 rounded mb-4">
+              Note: Equipment is currently reserved until <span className="font-bold">{new Date(activeBooking.endTime).toLocaleString()}</span>. All earlier dates/times prior to this end time are dimmed and disabled.
+            </p>
+          )}
+          <form onSubmit={handleJoinWaitlist} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Requested Start Time <span className="text-xs text-purple-600">(Dimmed before current end time)</span>
+                </label>
+                <input
+                  type="datetime-local"
+                  required
+                  min={getMinBookingStartTime()}
+                  value={waitlistForm.startTime}
+                  onChange={(e) => setWaitlistForm({ ...waitlistForm, startTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Requested End Time
+                </label>
+                <input
+                  type="datetime-local"
+                  required
+                  min={waitlistForm.startTime || getMinBookingStartTime()}
+                  value={waitlistForm.endTime}
+                  onChange={(e) => setWaitlistForm({ ...waitlistForm, endTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white"
+                />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowWaitlistForm(false)}
+                className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 text-gray-700 font-medium"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm bg-purple-600 text-white rounded-md hover:bg-purple-700 font-medium"
+              >
+                Join Waitlist Queue
               </button>
             </div>
           </form>
@@ -731,29 +795,12 @@ export default function EquipmentDetail() {
                   className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 >
                   <option value="AVAILABLE">AVAILABLE</option>
+                  <option value="BOOKING_PENDING">BOOKING PENDING</option>
                   <option value="BOOKED">BOOKED</option>
                   <option value="UNDER_MAINTENANCE">UNDER MAINTENANCE</option>
                   <option value="OUT_OF_SERVICE">OUT OF SERVICE</option>
                 </select>
               </div>
-            </div>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={editForm.isShared || false}
-                  onChange={(e) => setEditForm({ ...editForm, isShared: e.target.checked })}
-                />
-                Shared (Inter-College)
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input
-                  type="checkbox"
-                  checked={editForm.isRestricted || false}
-                  onChange={(e) => setEditForm({ ...editForm, isRestricted: e.target.checked })}
-                />
-                Restricted Access
-              </label>
             </div>
             <div className="flex justify-end gap-2 pt-2">
               <button

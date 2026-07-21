@@ -57,16 +57,8 @@ public class BookingService {
             throw new RuntimeException("Equipment is currently " + equipment.getStatus() + " and cannot be booked");
         }
 
-        if (user.getRole().equals("STUDENT") || user.getRole().equals("RESEARCHER")) {
-            Integer userInstId = user.getInstitution() != null ? user.getInstitution().getId() : 
-                                 (user.getDepartment() != null && user.getDepartment().getInstitution() != null ? 
-                                  user.getDepartment().getInstitution().getId() : null);
-            Integer eqInstId = (equipment.getDepartment() != null && equipment.getDepartment().getInstitution() != null)
-                    ? equipment.getDepartment().getInstitution().getId() : null;
-
-            if (userInstId == null || !userInstId.equals(eqInstId)) {
-                throw new RuntimeException("You can only book equipment within your own college");
-            }
+        if (user.getRole().equals("STUDENT") && Boolean.TRUE.equals(equipment.getIsRestricted())) {
+            throw new RuntimeException("This equipment has restricted access and cannot be booked by students.");
         }
 
         // Prevent duplicate pending booking requests by the same user for this equipment

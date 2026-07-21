@@ -75,6 +75,8 @@ CREATE TABLE IF NOT EXISTS waitlist (
     equipment_id INTEGER REFERENCES equipment(id) ON DELETE CASCADE,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     request_time TIMESTAMP NOT NULL,
+    start_time TIMESTAMP,
+    end_time TIMESTAMP,
     status VARCHAR(50) NOT NULL DEFAULT 'PENDING'
 );
 
