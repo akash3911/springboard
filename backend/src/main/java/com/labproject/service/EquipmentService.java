@@ -3,6 +3,7 @@ package com.labproject.service;
 import com.labproject.dto.EquipmentRequest;
 import com.labproject.entity.Department;
 import com.labproject.entity.Equipment;
+import com.labproject.repository.BookingRepository;
 import com.labproject.repository.DepartmentRepository;
 import com.labproject.repository.EquipmentRepository;
 import lombok.RequiredArgsConstructor;
@@ -16,26 +17,36 @@ public class EquipmentService {
 
     private final EquipmentRepository equipmentRepository;
     private final DepartmentRepository departmentRepository;
+    private final BookingRepository bookingRepository;
 
     public List<Equipment> findAll() {
-        return equipmentRepository.findAll();
+        return equipmentRepository.findAll().stream()
+                .map(this::syncEquipmentStatus)
+                .toList();
     }
 
     public Equipment findById(Integer id) {
-        return equipmentRepository.findById(id)
+        Equipment equipment = equipmentRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Equipment not found"));
+        return syncEquipmentStatus(equipment);
     }
 
     public List<Equipment> findByDepartmentId(Integer departmentId) {
-        return equipmentRepository.findByDepartmentId(departmentId);
+        return equipmentRepository.findByDepartmentId(departmentId).stream()
+                .map(this::syncEquipmentStatus)
+                .toList();
     }
 
     public List<Equipment> findByInstitutionId(Integer institutionId) {
-        return equipmentRepository.findByDepartmentInstitutionId(institutionId);
+        return equipmentRepository.findByDepartmentInstitutionId(institutionId).stream()
+                .map(this::syncEquipmentStatus)
+                .toList();
     }
 
     public List<Equipment> findByStatus(String status) {
-        return equipmentRepository.findByStatus(status);
+        return findAll().stream()
+                .filter(e -> e.getStatus().equalsIgnoreCase(status))
+                .toList();
     }
 
     public Equipment create(EquipmentRequest request) {
@@ -52,6 +63,26 @@ public class EquipmentService {
 
     public void delete(Integer id) {
         equipmentRepository.deleteById(id);
+    }
+
+    private Equipment syncEquipmentStatus(Equipment equipment) {
+        if (equipment == null) return null;
+        if ("UNDER_MAINTENANCE".equals(equipment.getStatus()) || "OUT_OF_SERVICE".equals(equipment.getStatus())) {
+            return equipment;
+        }
+
+        boolean hasApprovedBooking = bookingRepository.findByEquipmentId(equipment.getId()).stream()
+                .anyMatch(b -> "APPROVED".equals(b.getStatus()));
+
+        if (hasApprovedBooking && !"BOOKED".equals(equipment.getStatus())) {
+            equipment.setStatus("BOOKED");
+            return equipmentRepository.save(equipment);
+        } else if (!hasApprovedBooking && "BOOKED".equals(equipment.getStatus())) {
+            equipment.setStatus("AVAILABLE");
+            return equipmentRepository.save(equipment);
+        }
+
+        return equipment;
     }
 
     private void mapRequestToEntity(EquipmentRequest request, Equipment equipment) {
