@@ -10,6 +10,7 @@ import com.labproject.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -52,6 +53,10 @@ public class BookingService {
         Equipment equipment = equipmentRepository.findById(request.getEquipmentId())
                 .orElseThrow(() -> new RuntimeException("Equipment not found"));
 
+        if ("UNDER_MAINTENANCE".equals(equipment.getStatus()) || "OUT_OF_SERVICE".equals(equipment.getStatus())) {
+            throw new RuntimeException("Equipment is currently " + equipment.getStatus() + " and cannot be booked");
+        }
+
         if (user.getRole().equals("STUDENT") || user.getRole().equals("RESEARCHER")) {
             Integer userInstId = user.getInstitution() != null ? user.getInstitution().getId() : 
                                  (user.getDepartment() != null && user.getDepartment().getInstitution() != null ? 
@@ -61,6 +66,26 @@ public class BookingService {
 
             if (userInstId == null || !userInstId.equals(eqInstId)) {
                 throw new RuntimeException("You can only book equipment within your own college");
+            }
+        }
+
+        LocalDateTime newStart = request.getStartTime();
+        LocalDateTime newEnd = request.getEndTime();
+
+        if (newStart == null || newEnd == null || newEnd.isBefore(newStart) || newEnd.isEqual(newStart)) {
+            throw new RuntimeException("Invalid booking start or end time");
+        }
+
+        // Check for time slot overlap with existing APPROVED bookings
+        List<Booking> approvedBookings = bookingRepository.findByEquipmentId(equipment.getId()).stream()
+                .filter(b -> "APPROVED".equals(b.getStatus()))
+                .toList();
+
+        for (Booking existing : approvedBookings) {
+            if (newStart.isBefore(existing.getEndTime()) && newEnd.isAfter(existing.getStartTime())) {
+                throw new RuntimeException("Equipment is already booked from " + 
+                        existing.getStartTime() + " to " + existing.getEndTime() + 
+                        ". Please join the waitlist instead.");
             }
         }
 
@@ -77,20 +102,59 @@ public class BookingService {
 
     public Booking approveBooking(Integer id) {
         Booking booking = findById(id);
+        Equipment equipment = booking.getEquipment();
+
+        // Check for time slot overlap with existing APPROVED bookings
+        List<Booking> existingApproved = bookingRepository.findByEquipmentId(equipment.getId()).stream()
+                .filter(b -> "APPROVED".equals(b.getStatus()) && !b.getId().equals(id))
+                .toList();
+
+        for (Booking existing : existingApproved) {
+            if (booking.getStartTime().isBefore(existing.getEndTime()) && 
+                booking.getEndTime().isAfter(existing.getStartTime())) {
+                throw new RuntimeException("Cannot approve: equipment is already booked from " + 
+                        existing.getStartTime() + " to " + existing.getEndTime());
+            }
+        }
+
         booking.setStatus("APPROVED");
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        // Update equipment status to BOOKED
+        equipment.setStatus("BOOKED");
+        equipmentRepository.save(equipment);
+
+        return saved;
     }
 
     public Booking rejectBooking(Integer id, String reason) {
         Booking booking = findById(id);
         booking.setStatus("REJECTED");
         booking.setRejectionReason(reason);
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        updateEquipmentStatusIfFreed(booking.getEquipment());
+        return saved;
     }
 
     public Booking cancelBooking(Integer id) {
         Booking booking = findById(id);
         booking.setStatus("CANCELLED");
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        updateEquipmentStatusIfFreed(booking.getEquipment());
+        return saved;
+    }
+
+    private void updateEquipmentStatusIfFreed(Equipment equipment) {
+        if (equipment == null) return;
+
+        boolean hasApprovedBookings = bookingRepository.findByEquipmentId(equipment.getId()).stream()
+                .anyMatch(b -> "APPROVED".equals(b.getStatus()));
+
+        if (!hasApprovedBookings && "BOOKED".equals(equipment.getStatus())) {
+            equipment.setStatus("AVAILABLE");
+            equipmentRepository.save(equipment);
+        }
     }
 }

@@ -71,6 +71,7 @@ public class EquipmentService {
         equipment.setIsRestricted(request.getIsRestricted() != null ? request.getIsRestricted() : false);
         equipment.setRoomNumber(request.getRoomNumber());
         equipment.setContactEmail(request.getContactEmail());
+        equipment.setImageUrl(request.getImageUrl());
         equipment.setSpecifications(request.getSpecifications());
         equipment.setDescription(request.getDescription());
     }

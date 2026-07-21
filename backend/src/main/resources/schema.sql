@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS equipment (
     is_restricted BOOLEAN DEFAULT FALSE,
     room_number VARCHAR(50),
     contact_email VARCHAR(100),
+    image_url TEXT,
     specifications TEXT,
     description TEXT
 );

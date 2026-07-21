@@ -30,15 +30,15 @@ public class BookingController {
     @GetMapping("/my")
     public ResponseEntity<List<Booking>> getMyBookings() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        // Look up all bookings, then filter by user's email, or find by user's ID
-        // Let's filter bookings by user email or fetch using a helper method.
-        // Wait, BookingService has findByUserId(Integer userId), but let's query all and filter,
-        // or we can find the user ID first.
-        // Let's find user's bookings.
         List<Booking> bookings = bookingService.findAll().stream()
                 .filter(b -> b.getUser().getEmail().equals(email))
                 .toList();
         return ResponseEntity.ok(bookings);
+    }
+
+    @GetMapping("/equipment/{equipmentId}")
+    public ResponseEntity<List<Booking>> getByEquipment(@PathVariable Integer equipmentId) {
+        return ResponseEntity.ok(bookingService.findByEquipmentId(equipmentId));
     }
 
     @GetMapping("/department/{deptId}")
@@ -47,42 +47,42 @@ public class BookingController {
     }
 
     @PostMapping
-    public ResponseEntity<Booking> createBooking(@RequestBody BookingRequest request) {
+    public ResponseEntity<?> createBooking(@RequestBody BookingRequest request) {
         try {
             String email = SecurityContextHolder.getContext().getAuthentication().getName();
             return ResponseEntity.ok(bookingService.createBooking(request, email));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
     @PutMapping("/{id}/approve")
-    public ResponseEntity<Booking> approveBooking(@PathVariable Integer id) {
+    public ResponseEntity<?> approveBooking(@PathVariable Integer id) {
         try {
             return ResponseEntity.ok(bookingService.approveBooking(id));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
     @PutMapping("/{id}/reject")
-    public ResponseEntity<Booking> rejectBooking(
+    public ResponseEntity<?> rejectBooking(
             @PathVariable Integer id,
             @RequestBody Map<String, String> body) {
         try {
             String reason = body.getOrDefault("rejectionReason", "No reason provided");
             return ResponseEntity.ok(bookingService.rejectBooking(id, reason));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
     @PutMapping("/{id}/cancel")
-    public ResponseEntity<Booking> cancelBooking(@PathVariable Integer id) {
+    public ResponseEntity<?> cancelBooking(@PathVariable Integer id) {
         try {
             return ResponseEntity.ok(bookingService.cancelBooking(id));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 

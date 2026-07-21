@@ -12,6 +12,8 @@ const statusColors = {
   OUT_OF_SERVICE: 'bg-red-100 text-red-700',
 };
 
+
+
 export default function Equipment() {
   const { user } = { user: JSON.parse(localStorage.getItem('user')) }; // Get fresh user state
   const navigate = useNavigate();
@@ -372,9 +374,9 @@ export default function Equipment() {
             >
               <div>
                 <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-gray-800">{eq.name}</h3>
+                  <h3 className="font-semibold text-gray-800 text-base">{eq.name}</h3>
                   <span
-                    className={`text-xs px-2 py-1 rounded-full ${
+                    className={`text-xs px-2.5 py-1 rounded-full ${
                       statusColors[eq.status] || 'bg-gray-100 text-gray-600'
                     }`}
                   >

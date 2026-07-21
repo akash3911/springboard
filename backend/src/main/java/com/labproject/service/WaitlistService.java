@@ -39,6 +39,12 @@ public class WaitlistService {
             }
         }
 
+        boolean alreadyOnWaitlist = waitlistRepository.findByEquipmentId(equipmentId).stream()
+                .anyMatch(w -> w.getUser().getId().equals(user.getId()) && "PENDING".equals(w.getStatus()));
+        if (alreadyOnWaitlist) {
+            throw new RuntimeException("You are already on the active waitlist for this equipment");
+        }
+
         Waitlist waitlist = new Waitlist();
         waitlist.setEquipment(equipment);
         waitlist.setUser(user);
@@ -46,6 +52,50 @@ public class WaitlistService {
         waitlist.setStatus("PENDING");
 
         return waitlistRepository.save(waitlist);
+    }
+
+    public void cancelWaitlist(Integer id, String userEmail) {
+        Waitlist waitlist = waitlistRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Waitlist entry not found"));
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        boolean isOwner = waitlist.getUser().getId().equals(currentUser.getId());
+        boolean isManager = List.of("LAB_MANAGER", "DEPARTMENT_HEAD", "INSTITUTION_HEAD", "SYSTEM_ADMIN")
+                .contains(currentUser.getRole());
+
+        if (!isOwner && !isManager) {
+            throw new RuntimeException("Not authorized to cancel this waitlist entry");
+        }
+
+        waitlist.setStatus("CANCELLED");
+        waitlistRepository.save(waitlist);
+    }
+
+    public List<Waitlist> findForUser(String userEmail) {
+        User currentUser = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if ("SYSTEM_ADMIN".equals(currentUser.getRole())) {
+            return waitlistRepository.findAll();
+        } else if (List.of("LAB_MANAGER", "DEPARTMENT_HEAD", "INSTITUTION_HEAD").contains(currentUser.getRole())) {
+            Integer userInstId = currentUser.getInstitution() != null ? currentUser.getInstitution().getId() :
+                    (currentUser.getDepartment() != null && currentUser.getDepartment().getInstitution() != null ?
+                     currentUser.getDepartment().getInstitution().getId() : null);
+            if (userInstId == null) {
+                return List.of();
+            }
+            return waitlistRepository.findAll().stream()
+                    .filter(w -> {
+                        Integer eqInstId = (w.getEquipment() != null && w.getEquipment().getDepartment() != null &&
+                                w.getEquipment().getDepartment().getInstitution() != null)
+                                ? w.getEquipment().getDepartment().getInstitution().getId() : null;
+                        return userInstId.equals(eqInstId);
+                    })
+                    .toList();
+        } else {
+            return waitlistRepository.findByUserId(currentUser.getId());
+        }
     }
 
     public List<Waitlist> findByEquipmentId(Integer equipmentId) {

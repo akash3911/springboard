@@ -3,20 +3,50 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
-import { ArrowLeft, Calendar, Wrench, Edit, Trash2 } from 'lucide-react';
+import {
+  Calendar,
+  Wrench,
+  Edit,
+  Trash2,
+  ArrowLeft,
+  Clock,
+  UserCheck,
+  CheckCircle2,
+  AlertCircle,
+} from 'lucide-react';
 
 const statusColors = {
-  AVAILABLE: 'bg-green-100 text-green-700',
-  BOOKED: 'bg-blue-100 text-blue-700',
-  UNDER_MAINTENANCE: 'bg-yellow-100 text-yellow-700',
-  OUT_OF_SERVICE: 'bg-red-100 text-red-700',
+  AVAILABLE: 'bg-green-100 text-green-700 border border-green-200',
+  BOOKED: 'bg-blue-100 text-blue-700 border border-blue-200',
+  UNDER_MAINTENANCE: 'bg-yellow-100 text-yellow-700 border border-yellow-200',
+  OUT_OF_SERVICE: 'bg-red-100 text-red-700 border border-red-200',
+};
+
+const getEquipmentImage = (eq) => {
+  if (eq?.imageUrl) return eq.imageUrl;
+  const name = (eq?.name || '').toLowerCase();
+  const cat = (eq?.category || '').toLowerCase();
+
+  if (name.includes('3d printer')) return 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80';
+  if (name.includes('vr') || name.includes('headset')) return 'https://images.unsplash.com/photo-1622979135225-d2ba269bc1bd?auto=format&fit=crop&w=800&q=80';
+  if (name.includes('laser') || cat.includes('optics')) return 'https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=800&q=80';
+  if (name.includes('cryostat') || cat.includes('cryo')) return 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=800&q=80';
+  if (name.includes('pcr') || cat.includes('biology')) return 'https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=800&q=80';
+  if (name.includes('microscope') || cat.includes('imaging')) return 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80';
+  if (name.includes('centrifuge')) return 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?auto=format&fit=crop&w=800&q=80';
+  if (name.includes('sequencer') || cat.includes('chemistry') || cat.includes('genetics')) return 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=800&q=80';
+  return 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80';
 };
 
 export default function EquipmentDetail() {
   const { id } = useParams();
-  const { user } = { user: JSON.parse(localStorage.getItem('user')) }; // Get fresh user state
   const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [equipment, setEquipment] = useState(null);
+  const [activeBooking, setActiveBooking] = useState(null);
+  const [waitlistEntries, setWaitlistEntries] = useState([]);
+  const [userWaitlistEntry, setUserWaitlistEntry] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showBookForm, setShowBookForm] = useState(false);
   const [showMaintenanceForm, setShowMaintenanceForm] = useState(false);
@@ -38,6 +68,8 @@ export default function EquipmentDetail() {
 
   useEffect(() => {
     loadEquipment();
+    loadWaitlist();
+    loadBookings();
   }, [id]);
 
   const loadEquipment = async () => {
@@ -49,6 +81,29 @@ export default function EquipmentDetail() {
       toast.error('Failed to load equipment');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadBookings = async () => {
+    try {
+      const res = await api.get(`/bookings/equipment/${id}`);
+      const list = Array.isArray(res.data) ? res.data : [];
+      const approved = list.find(b => b.status === 'APPROVED');
+      setActiveBooking(approved || null);
+    } catch {
+      setActiveBooking(null);
+    }
+  };
+
+  const loadWaitlist = async () => {
+    try {
+      const res = await api.get(`/equipment/${id}/waitlist`);
+      const list = Array.isArray(res.data) ? res.data : [];
+      setWaitlistEntries(list.filter(w => w.status === 'PENDING'));
+      const myEntry = list.find(w => w.user?.email === user?.email && w.status === 'PENDING');
+      setUserWaitlistEntry(myEntry || null);
+    } catch {
+      // ignore
     }
   };
 
@@ -72,9 +127,11 @@ export default function EquipmentDetail() {
 
   const canScheduleMaint = (role === 'LAB_MANAGER' && isOwnDept);
   
-  const canJoinWaitlist = ['STUDENT', 'RESEARCHER'].includes(role) && 
+  const canJoinWaitlist = ['STUDENT', 'RESEARCHER', 'LAB_MANAGER'].includes(role) && 
                           (role === 'STUDENT' ? isOwnInst && !equipment?.isRestricted :
                            role === 'RESEARCHER' ? (isOwnInst || equipment?.isShared) : true);
+
+  const isBeingUsed = equipment?.status === 'BOOKED' || equipment?.status === 'UNDER_MAINTENANCE' || Boolean(activeBooking);
 
   const handleBook = async (e) => {
     e.preventDefault();
@@ -89,6 +146,7 @@ export default function EquipmentDetail() {
       setShowBookForm(false);
       setBookForm({ startTime: '', endTime: '', purpose: '' });
       loadEquipment();
+      loadBookings();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to book');
     }
@@ -97,9 +155,21 @@ export default function EquipmentDetail() {
   const handleJoinWaitlist = async () => {
     try {
       await api.post('/waitlist', { equipmentId: Number(id) });
-      toast.success('Added to waitlist');
+      toast.success('Successfully joined waitlist!');
+      loadWaitlist();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to join waitlist');
+    }
+  };
+
+  const handleLeaveWaitlist = async () => {
+    if (!userWaitlistEntry) return;
+    try {
+      await api.put(`/waitlist/${userWaitlistEntry.id}/cancel`);
+      toast.success('Left waitlist');
+      loadWaitlist();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to leave waitlist');
     }
   };
 
@@ -123,7 +193,6 @@ export default function EquipmentDetail() {
 
   const loadTechnicians = async () => {
     try {
-      // Tech dropdown list: if system admin, get all techs. If not, restrict to techs in their institution
       const res = await api.get('/users?role=LAB_TECHNICIAN');
       setTechnicians(Array.isArray(res.data) ? res.data : []);
     } catch {
@@ -142,6 +211,7 @@ export default function EquipmentDetail() {
       toast.success('Equipment updated');
       setShowEditForm(false);
       loadEquipment();
+      loadBookings();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update');
     }
@@ -158,8 +228,8 @@ export default function EquipmentDetail() {
     }
   };
 
-  if (loading) return <p className="text-gray-500">Loading...</p>;
-  if (!equipment) return <p className="text-gray-500">Equipment not found</p>;
+  if (loading) return <p className="text-gray-500 py-8 text-center">Loading equipment details...</p>;
+  if (!equipment) return <p className="text-gray-500 py-8 text-center">Equipment not found</p>;
 
   if (isStudentBlocked || isResearcherBlocked) {
     return (
@@ -178,24 +248,27 @@ export default function EquipmentDetail() {
   const showTags = !hideTagsRoles.includes(role);
 
   return (
-    <div>
+    <div className="max-w-4xl mx-auto">
       <button
         onClick={() => navigate('/equipment')}
-        className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800 mb-4"
+        className="flex items-center gap-1 text-sm text-gray-600 hover:text-gray-800 mb-4 cursor-pointer font-medium"
       >
         <ArrowLeft size={16} />
         Back to Equipment
       </button>
 
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
+      <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
         {/* Header */}
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between mb-6 pb-4 border-b border-gray-100">
           <div>
-            <h2 className="text-2xl font-bold text-gray-800">{equipment.name}</h2>
-            <p className="text-gray-500">{equipment.category}</p>
+            <span className="text-xs uppercase tracking-wider font-semibold text-blue-600 bg-blue-50 px-2.5 py-1 rounded">
+              {equipment.category}
+            </span>
+            <h1 className="text-2xl font-bold text-gray-800 mt-2">{equipment.name}</h1>
+            <p className="text-gray-500 text-sm">{equipment.manufacturer} — {equipment.model}</p>
           </div>
           <span
-            className={`text-sm px-3 py-1 rounded-full ${
+            className={`text-sm px-3.5 py-1.5 rounded-full font-semibold shadow-sm ${
               statusColors[equipment.status] || 'bg-gray-100 text-gray-600'
             }`}
           >
@@ -203,133 +276,206 @@ export default function EquipmentDetail() {
           </span>
         </div>
 
-        {/* Details Grid */}
-        <div className="grid grid-cols-2 gap-4 mb-6">
-          <div>
-            <p className="text-sm text-gray-500">Manufacturer</p>
-            <p className="text-gray-800">{equipment.manufacturer || 'N/A'}</p>
+        {/* Main Section: Image + Details */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+          {/* Left: Equipment Image */}
+          <div className="md:col-span-1">
+            <div className="w-full h-64 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 shadow-sm relative">
+              <img
+                src={getEquipmentImage(equipment)}
+                alt={equipment.name}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.onerror = null;
+                  e.target.src = 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80';
+                }}
+              />
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-gray-500">Model</p>
-            <p className="text-gray-800">{equipment.model || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Serial Number</p>
-            <p className="text-gray-800">{equipment.serialNumber || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Room Number</p>
-            <p className="text-gray-800">{equipment.roomNumber || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Contact Email</p>
-            <p className="text-gray-800">{equipment.contactEmail || 'N/A'}</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Purchase Date</p>
-            <p className="text-gray-800">
-              {equipment.purchaseDate
-                ? new Date(equipment.purchaseDate).toLocaleDateString()
-                : 'N/A'}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Department</p>
-            <p className="text-gray-800">
-              {equipment.department?.name || 'N/A'} ({equipment.department?.institution?.name || 'N/A'})
-            </p>
-          </div>
-          {showTags && (
-            <div>
-              <p className="text-sm text-gray-500 mb-1">Tags</p>
-              <div className="flex gap-1 flex-wrap">
-                {equipment.isRestricted && (
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-red-50 text-red-600 border border-red-200">
-                    Restricted
-                  </span>
-                )}
-                {equipment.isShared && (
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-purple-50 text-purple-600 border border-purple-200">
-                    Shared
-                  </span>
-                )}
-                {isExternal && (
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-orange-50 text-orange-600 border border-orange-200">
-                    External
-                  </span>
-                )}
-                {!equipment.isRestricted && !equipment.isShared && !isExternal && (
-                  <span className="text-[10px] px-2 py-0.5 rounded bg-gray-50 text-gray-600 border border-gray-200">
-                    Internal
-                  </span>
-                )}
+
+          {/* Right: Details Grid */}
+          <div className="md:col-span-2 space-y-4">
+            {/* Active Booking Banner */}
+            {activeBooking && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3.5 flex items-start gap-3">
+                <Calendar size={20} className="text-blue-600 shrink-0 mt-0.5" />
+                <div className="w-full">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs uppercase font-bold tracking-wider text-blue-900">Currently Booked & Approved</h4>
+                  </div>
+                  <p className="text-xs text-blue-800 mt-1">
+                    Booked by <span className="font-semibold text-blue-950">{activeBooking.user?.name || 'User'}</span> ({activeBooking.user?.email})
+                  </p>
+                  <p className="text-xs font-mono text-blue-900 mt-1 bg-blue-100/70 inline-block px-2 py-0.5 rounded">
+                    Booked until: {new Date(activeBooking.endTime).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Waitlist Banner if user is on waitlist */}
+            {userWaitlistEntry && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-purple-800">
+                  <CheckCircle2 size={16} className="text-purple-600" />
+                  <span className="text-xs font-medium">You are currently on the waitlist for this equipment.</span>
+                </div>
+                <button
+                  onClick={handleLeaveWaitlist}
+                  className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-2.5 py-1 rounded font-medium cursor-pointer"
+                >
+                  Leave Waitlist
+                </button>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Manufacturer</p>
+                <p className="font-medium text-gray-800">{equipment.manufacturer || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Model</p>
+                <p className="font-medium text-gray-800">{equipment.model || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Serial Number</p>
+                <p className="font-medium text-gray-800 font-mono text-xs">{equipment.serialNumber || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Room Number</p>
+                <p className="font-medium text-gray-800">{equipment.roomNumber || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Contact Email</p>
+                <p className="font-medium text-gray-800">{equipment.contactEmail || 'N/A'}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Purchase Date</p>
+                <p className="font-medium text-gray-800">
+                  {equipment.purchaseDate
+                    ? new Date(equipment.purchaseDate).toLocaleDateString()
+                    : 'N/A'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Department & College</p>
+                <p className="font-medium text-gray-800">
+                  {equipment.department?.name || 'N/A'} ({equipment.department?.institution?.name || 'N/A'})
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Active Waitlist</p>
+                <p className="font-medium text-gray-800 flex items-center gap-1">
+                  <Clock size={14} className="text-purple-600" />
+                  {waitlistEntries.length} {waitlistEntries.length === 1 ? 'user' : 'users'} waiting
+                </p>
               </div>
             </div>
-          )}
+
+            {showTags && (
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Access Tags</p>
+                <div className="flex gap-2 flex-wrap">
+                  {equipment.isRestricted && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-medium">
+                      Restricted Access
+                    </span>
+                  )}
+                  {equipment.isShared && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-purple-50 text-purple-700 border border-purple-200 font-medium">
+                      Inter-College Shared
+                    </span>
+                  )}
+                  {isExternal && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-orange-50 text-orange-700 border border-orange-200 font-medium">
+                      External Institution
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Specifications */}
         {equipment.specifications && (
-          <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Specifications</h3>
-            <pre className="bg-gray-50 border border-gray-200 rounded p-3 text-sm text-gray-800 whitespace-pre-wrap font-mono">
+          <div className="mb-6 pt-4 border-t border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Specifications</h3>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-3 text-sm font-mono text-gray-700 whitespace-pre-wrap">
               {equipment.specifications}
-            </pre>
+            </div>
           </div>
         )}
 
         {/* Description */}
         {equipment.description && (
           <div className="mb-6">
-            <h3 className="text-sm font-medium text-gray-500 mb-2">Description</h3>
-            <p className="text-sm text-gray-700">{equipment.description}</p>
+            <h3 className="text-sm font-semibold text-gray-700 mb-2">Description</h3>
+            <p className="text-sm text-gray-700 leading-relaxed">{equipment.description}</p>
           </div>
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-4 border-t border-gray-200">
-          {canBook && equipment.status === 'AVAILABLE' && (
+        <div className="flex gap-3 pt-4 border-t border-gray-200 flex-wrap">
+          {canBook && !isBeingUsed && (
             <button
               onClick={() => setShowBookForm(!showBookForm)}
-              className="flex items-center gap-1 bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-medium cursor-pointer"
+              className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 font-medium cursor-pointer transition-colors shadow-sm"
             >
               <Calendar size={16} />
-              Book
+              Book Equipment
             </button>
           )}
-          {canJoinWaitlist && equipment.status === 'BOOKED' && (
+
+          {/* Join Waitlist shown ONLY when equipment is currently being used by someone / booked */}
+          {canJoinWaitlist && isBeingUsed && !userWaitlistEntry && (
             <button
               onClick={handleJoinWaitlist}
-              className="flex items-center gap-1 bg-purple-600 text-white px-4 py-2 rounded text-sm hover:bg-purple-700 font-medium cursor-pointer"
+              className="flex items-center gap-1.5 bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 font-medium cursor-pointer transition-colors shadow-sm"
             >
+              <Clock size={16} />
               Join Waitlist
             </button>
           )}
+
+          {userWaitlistEntry && (
+            <button
+              onClick={handleLeaveWaitlist}
+              className="flex items-center gap-1.5 bg-purple-100 text-purple-800 border border-purple-300 px-4 py-2 rounded-lg text-sm hover:bg-purple-200 font-medium cursor-pointer transition-colors"
+            >
+              <UserCheck size={16} />
+              On Waitlist (Click to Leave)
+            </button>
+          )}
+
           {canScheduleMaint && (
             <button
               onClick={() => {
                 setShowMaintenanceForm(!showMaintenanceForm);
                 if (!showMaintenanceForm) loadTechnicians();
               }}
-              className="flex items-center gap-1 bg-yellow-600 text-white px-4 py-2 rounded text-sm hover:bg-yellow-700 font-medium cursor-pointer"
+              className="flex items-center gap-1.5 bg-yellow-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-yellow-700 font-medium cursor-pointer transition-colors shadow-sm"
             >
               <Wrench size={16} />
               Schedule Maintenance
             </button>
           )}
+
           {canEdit && (
             <button
               onClick={() => setShowEditForm(!showEditForm)}
-              className="flex items-center gap-1 bg-gray-600 text-white px-4 py-2 rounded text-sm hover:bg-gray-700 font-medium cursor-pointer"
+              className="flex items-center gap-1.5 bg-gray-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-gray-700 font-medium cursor-pointer transition-colors shadow-sm"
             >
               <Edit size={16} />
               Edit
             </button>
           )}
+
           {canDelete && (
             <button
               onClick={handleDelete}
-              className="flex items-center gap-1 bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium cursor-pointer"
+              className="flex items-center gap-1.5 bg-red-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-red-700 font-medium cursor-pointer transition-colors shadow-sm"
             >
               <Trash2 size={16} />
               Delete
@@ -340,22 +486,20 @@ export default function EquipmentDetail() {
 
       {/* Booking Form Modal */}
       {showBookForm && (
-        <div className="mt-4 bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-3">Book Equipment</h3>
-          <form onSubmit={handleBook} className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+        <div className="mt-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Book Equipment</h3>
+          <form onSubmit={handleBook} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Start Time
                 </label>
                 <input
                   type="datetime-local"
-                  value={bookForm.startTime}
-                  onChange={(e) =>
-                    setBookForm({ ...bookForm, startTime: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                   required
+                  value={bookForm.startTime}
+                  onChange={(e) => setBookForm({ ...bookForm, startTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
               <div>
@@ -364,12 +508,10 @@ export default function EquipmentDetail() {
                 </label>
                 <input
                   type="datetime-local"
-                  value={bookForm.endTime}
-                  onChange={(e) =>
-                    setBookForm({ ...bookForm, endTime: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                   required
+                  value={bookForm.endTime}
+                  onChange={(e) => setBookForm({ ...bookForm, endTime: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -378,69 +520,64 @@ export default function EquipmentDetail() {
                 Purpose
               </label>
               <textarea
-                value={bookForm.purpose}
-                onChange={(e) =>
-                  setBookForm({ ...bookForm, purpose: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                rows={2}
                 required
+                rows={3}
+                placeholder="Describe your purpose for booking this equipment..."
+                value={bookForm.purpose}
+                onChange={(e) => setBookForm({ ...bookForm, purpose: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-medium cursor-pointer"
-              >
-                Submit Booking
-              </button>
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setShowBookForm(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300 font-medium cursor-pointer"
+                className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 text-gray-700 font-medium"
               >
                 Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 font-medium"
+              >
+                Submit Booking
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Maintenance Form */}
+      {/* Maintenance Form Modal */}
       {showMaintenanceForm && (
-        <div className="mt-4 bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-3">Schedule Maintenance</h3>
-          <form onSubmit={handleScheduleMaintenance} className="space-y-3">
-            <div className="grid grid-cols-2 gap-4">
+        <div className="mt-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Schedule Maintenance</h3>
+          <form onSubmit={handleScheduleMaintenance} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Scheduled Date
                 </label>
                 <input
                   type="date"
-                  value={maintForm.scheduledDate}
-                  onChange={(e) =>
-                    setMaintForm({ ...maintForm, scheduledDate: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
                   required
+                  value={maintForm.scheduledDate}
+                  onChange={(e) => setMaintForm({ ...maintForm, scheduledDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Technician
+                  Assigned Technician
                 </label>
                 <select
                   value={maintForm.technicianId}
-                  onChange={(e) =>
-                    setMaintForm({ ...maintForm, technicianId: e.target.value })
-                  }
-                  className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                  onChange={(e) => setMaintForm({ ...maintForm, technicianId: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
                 >
-                  <option value="">Select Technician</option>
+                  <option value="">Select Technician (Optional)</option>
                   {technicians.map((t) => (
                     <option key={t.id} value={t.id}>
-                      {t.name} ({t.department?.name})
+                      {t.name} ({t.email})
                     </option>
                   ))}
                 </select>
@@ -451,149 +588,134 @@ export default function EquipmentDetail() {
                 Description
               </label>
               <textarea
-                value={maintForm.description}
-                onChange={(e) =>
-                  setMaintForm({ ...maintForm, description: e.target.value })
-                }
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                rows={2}
                 required
+                rows={3}
+                placeholder="Describe maintenance work..."
+                value={maintForm.description}
+                onChange={(e) => setMaintForm({ ...maintForm, description: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-yellow-500"
               />
             </div>
-            <div className="flex gap-2">
-              <button
-                type="submit"
-                className="bg-yellow-600 text-white px-4 py-2 rounded text-sm hover:bg-yellow-700 font-medium cursor-pointer"
-              >
-                Schedule
-              </button>
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setShowMaintenanceForm(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300 font-medium cursor-pointer"
+                className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 text-gray-700 font-medium"
               >
                 Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm bg-yellow-600 text-white rounded-md hover:bg-yellow-700 font-medium"
+              >
+                Schedule
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Edit Form */}
+      {/* Edit Form Modal */}
       {showEditForm && (
-        <div className="mt-4 bg-white border border-gray-200 rounded-lg p-4">
-          <h3 className="text-lg font-semibold mb-3">Edit Equipment</h3>
-          <form onSubmit={handleEdit} className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-              <input
-                type="text"
-                value={editForm.name || ''}
-                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-              <input
-                type="text"
-                value={editForm.category || ''}
-                onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer</label>
-              <input
-                type="text"
-                value={editForm.manufacturer || ''}
-                onChange={(e) => setEditForm({ ...editForm, manufacturer: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
-              <input
-                type="text"
-                value={editForm.model || ''}
-                onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Room Number</label>
-              <input
-                type="text"
-                value={editForm.roomNumber || ''}
-                onChange={(e) => setEditForm({ ...editForm, roomNumber: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-              <select
-                value={editForm.status || ''}
-                onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-              >
-                <option value="AVAILABLE">Available</option>
-                <option value="BOOKED">Booked</option>
-                <option value="UNDER_MAINTENANCE">Under Maintenance</option>
-                <option value="OUT_OF_SERVICE">Out of Service</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-4 mt-6">
-              <label className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+        <div className="mt-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">Edit Equipment</h3>
+          <form onSubmit={handleEdit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
                 <input
-                  type="checkbox"
-                  checked={editForm.isRestricted || false}
-                  onChange={(e) => setEditForm({ ...editForm, isRestricted: e.target.checked })}
-                  className="rounded border-gray-300"
+                  type="text"
+                  required
+                  value={editForm.name || ''}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                 />
-                Restricted Equipment
-              </label>
-              <label className="flex items-center gap-2 text-sm text-gray-700 font-medium">
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.category || ''}
+                  onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Manufacturer</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.manufacturer || ''}
+                  onChange={(e) => setEditForm({ ...editForm, manufacturer: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Model</label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.model || ''}
+                  onChange={(e) => setEditForm({ ...editForm, model: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Image URL</label>
+                <input
+                  type="text"
+                  placeholder="https://..."
+                  value={editForm.imageUrl || ''}
+                  onChange={(e) => setEditForm({ ...editForm, imageUrl: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={editForm.status || 'AVAILABLE'}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                >
+                  <option value="AVAILABLE">AVAILABLE</option>
+                  <option value="BOOKED">BOOKED</option>
+                  <option value="UNDER_MAINTENANCE">UNDER MAINTENANCE</option>
+                  <option value="OUT_OF_SERVICE">OUT OF SERVICE</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 text-sm text-gray-700">
                 <input
                   type="checkbox"
                   checked={editForm.isShared || false}
                   onChange={(e) => setEditForm({ ...editForm, isShared: e.target.checked })}
-                  className="rounded border-gray-300"
                 />
-                Shared (Inter-Institution)
+                Shared (Inter-College)
+              </label>
+              <label className="flex items-center gap-2 text-sm text-gray-700">
+                <input
+                  type="checkbox"
+                  checked={editForm.isRestricted || false}
+                  onChange={(e) => setEditForm({ ...editForm, isRestricted: e.target.checked })}
+                />
+                Restricted Access
               </label>
             </div>
-            <div>{/* Spacer */}</div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Specifications</label>
-              <textarea
-                value={editForm.specifications || ''}
-                onChange={(e) => setEditForm({ ...editForm, specifications: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                rows={2}
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-              <textarea
-                value={editForm.description || ''}
-                onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
-                className="w-full border border-gray-300 rounded px-3 py-2 text-sm"
-                rows={2}
-              />
-            </div>
-            <div className="col-span-2 flex gap-2">
-              <button
-                type="submit"
-                className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700 font-medium cursor-pointer"
-              >
-                Save Changes
-              </button>
+            <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
                 onClick={() => setShowEditForm(false)}
-                className="bg-gray-200 text-gray-700 px-4 py-2 rounded text-sm hover:bg-gray-300 font-medium cursor-pointer"
+                className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50 text-gray-700 font-medium"
               >
                 Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 text-sm bg-gray-800 text-white rounded-md hover:bg-gray-900 font-medium"
+              >
+                Save Changes
               </button>
             </div>
           </form>

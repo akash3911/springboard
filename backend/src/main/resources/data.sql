@@ -47,20 +47,20 @@ INSERT INTO users (id, department_id, institution_id, name, email, password, rol
 ON CONFLICT DO NOTHING;
 
 -- Equipment
-INSERT INTO equipment (id, department_id, name, category, manufacturer, model, serial_number, status, purchase_date, is_shared, is_restricted, room_number, contact_email, specifications, description) VALUES
+INSERT INTO equipment (id, department_id, name, category, manufacturer, model, serial_number, status, purchase_date, is_shared, is_restricted, room_number, contact_email, image_url, specifications, description) VALUES
 -- MIT CS (Dept 1)
-(1, 1, '3D Printer', 'Fabrication', 'Prusa', 'MK4', 'SN-3DP-001', 'AVAILABLE', '2024-01-15', FALSE, FALSE, 'Room 101', 'manager@mit.edu', 'Build volume: 250x210x220mm', 'High-quality FDM 3D printer for prototyping'),
-(2, 1, 'VR Headset', 'Imaging', 'Meta', 'Quest 3', 'SN-VR-002', 'AVAILABLE', '2024-02-10', FALSE, FALSE, 'Room 102', 'manager@mit.edu', '128GB Storage, 4K Display', 'Virtual reality headset for visualization studies'),
+(1, 1, '3D Printer', 'Fabrication', 'Prusa', 'MK4', 'SN-3DP-001', 'AVAILABLE', '2024-01-15', FALSE, FALSE, 'Room 101', 'manager@mit.edu', 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80', 'Build volume: 250x210x220mm', 'High-quality FDM 3D printer for prototyping'),
+(2, 1, 'VR Headset', 'Imaging', 'Meta', 'Quest 3', 'SN-VR-002', 'AVAILABLE', '2024-02-10', FALSE, FALSE, 'Room 102', 'manager@mit.edu', 'https://images.unsplash.com/photo-1622979135225-d2ba269bc1bd?auto=format&fit=crop&w=800&q=80', '128GB Storage, 4K Display', 'Virtual reality headset for visualization studies'),
 -- MIT Physics (Dept 2)
-(3, 2, 'Laser Interferometer', 'Optics', 'Thorlabs', 'INT-500', 'SN-LAS-003', 'AVAILABLE', '2023-08-20', FALSE, TRUE, 'Room 201', 'depthead@mit.edu', 'Wavelength: 632.8nm, Class 3B', 'Advanced restricted laser interferometer'),
-(4, 2, 'Cryostat', 'Cryogenics', 'Oxford Instruments', 'Optistat', 'SN-CRY-004', 'AVAILABLE', '2023-11-05', TRUE, FALSE, 'Room 202', 'depthead@mit.edu', 'Temperature range: 1.5K - 300K', 'Helium cryostat for low-temperature measurements'),
+(3, 2, 'Laser Interferometer', 'Optics', 'Thorlabs', 'INT-500', 'SN-LAS-003', 'AVAILABLE', '2023-08-20', FALSE, TRUE, 'Room 201', 'depthead@mit.edu', 'https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=800&q=80', 'Wavelength: 632.8nm, Class 3B', 'Advanced restricted laser interferometer'),
+(4, 2, 'Cryostat', 'Cryogenics', 'Oxford Instruments', 'Optistat', 'SN-CRY-004', 'AVAILABLE', '2023-11-05', TRUE, FALSE, 'Room 202', 'depthead@mit.edu', 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=800&q=80', 'Temperature range: 1.5K - 300K', 'Helium cryostat for low-temperature measurements'),
 -- IIT Biology (Dept 3)
-(5, 3, 'PCR Thermal Cycler', 'Biology', 'Bio-Rad', 'T100', 'SN-PCR-005', 'AVAILABLE', '2024-03-01', FALSE, FALSE, 'Room 301', 'manager@iit.edu', '96-well, gradient capable', 'Thermal cycler for DNA amplification'),
-(6, 3, 'Fluorescence Microscope', 'Imaging', 'Nikon', 'Eclipse', 'SN-MIC-006', 'UNDER_MAINTENANCE', '2023-05-18', FALSE, FALSE, 'Room 302', 'manager@iit.edu', 'Magnification: 1000x', 'Fluorescence inverted microscope'),
-(7, 3, 'Centrifuge', 'Biology', 'Eppendorf', '5424R', 'SN-CEN-007', 'AVAILABLE', '2023-09-12', TRUE, FALSE, 'Room 303', 'manager@iit.edu', 'Max speed: 15000 rpm', 'High-speed refrigerated centrifuge'),
+(5, 3, 'PCR Thermal Cycler', 'Biology', 'Bio-Rad', 'T100', 'SN-PCR-005', 'AVAILABLE', '2024-03-01', FALSE, FALSE, 'Room 301', 'manager@iit.edu', 'https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=800&q=80', '96-well, gradient capable', 'Thermal cycler for DNA amplification'),
+(6, 3, 'Fluorescence Microscope', 'Imaging', 'Nikon', 'Eclipse', 'SN-MIC-006', 'UNDER_MAINTENANCE', '2023-05-18', FALSE, FALSE, 'Room 302', 'manager@iit.edu', 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80', 'Magnification: 1000x', 'Fluorescence inverted microscope'),
+(7, 3, 'Centrifuge', 'Biology', 'Eppendorf', '5424R', 'SN-CEN-007', 'AVAILABLE', '2023-09-12', TRUE, FALSE, 'Room 303', 'manager@iit.edu', 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?auto=format&fit=crop&w=800&q=80', 'Max speed: 15000 rpm', 'High-speed refrigerated centrifuge'),
 -- VIT Chemistry (Dept 4)
-(8, 4, 'DNA Sequencer', 'Genetics', 'Illumina', 'MiSeq', 'SN-SEQ-008', 'AVAILABLE', '2024-04-10', TRUE, TRUE, 'Room 401', 'head@vit.edu', 'Output: Up to 15 Gb', 'Restricted and shared high-throughput DNA sequencer'),
-(9, 4, 'Autoclave', 'Sterilization', 'Tuttnauer', '3870M', 'SN-AUT-009', 'AVAILABLE', '2024-05-15', FALSE, FALSE, 'Room 402', 'head@vit.edu', 'Volume: 85 Liters', 'Steam sterilizer for biology lab prep')
+(8, 4, 'DNA Sequencer', 'Genetics', 'Illumina', 'MiSeq', 'SN-SEQ-008', 'AVAILABLE', '2024-04-10', TRUE, TRUE, 'Room 401', 'head@vit.edu', 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=800&q=80', 'Output: Up to 15 Gb', 'Restricted and shared high-throughput DNA sequencer'),
+(9, 4, 'Autoclave', 'Sterilization', 'Tuttnauer', '3870M', 'SN-AUT-009', 'AVAILABLE', '2024-05-15', FALSE, FALSE, 'Room 402', 'head@vit.edu', 'https://images.unsplash.com/photo-1583912267670-657592e914a6?auto=format&fit=crop&w=800&q=80', 'Volume: 85 Liters', 'Steam sterilizer for biology lab prep')
 ON CONFLICT DO NOTHING;
 
 -- Bookings
@@ -80,13 +80,14 @@ INSERT INTO utilization (id, equipment_id, usage_hours, utilization_percentage, 
 (1, 1, 95.50, 59.70, '2026-07-01'),
 (2, 3, 40.25, 25.15, '2026-07-01'),
 (3, 5, 120.00, 75.00, '2026-07-01'),
-(4, 7, 72.80, 45.50, '2026-07-01'),
+(4, 7, 45.50, 45.50, '2026-07-01'),
 (5, 8, 140.40, 87.75, '2026-07-01')
 ON CONFLICT DO NOTHING;
 
 -- Waitlist
 INSERT INTO waitlist (id, equipment_id, user_id, request_time, status) VALUES
-(1, 4, 2, '2026-07-16 10:00:00', 'PENDING')
+(1, 4, 2, '2026-07-16 10:00:00', 'PENDING'),
+(2, 1, 3, '2026-07-17 11:30:00', 'PENDING')
 ON CONFLICT DO NOTHING;
 
 -- Notifications

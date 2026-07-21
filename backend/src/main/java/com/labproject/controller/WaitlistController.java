@@ -18,14 +18,34 @@ public class WaitlistController {
 
     private final WaitlistService waitlistService;
 
+    @GetMapping
+    public ResponseEntity<List<Waitlist>> getAllWaitlist() {
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(waitlistService.findForUser(email));
+    }
+
     @PostMapping
-    public ResponseEntity<Waitlist> joinWaitlist(@RequestBody Map<String, Integer> body) {
+    public ResponseEntity<?> joinWaitlist(@RequestBody Map<String, Integer> body) {
         try {
             Integer equipmentId = body.get("equipmentId");
+            if (equipmentId == null) {
+                return ResponseEntity.badRequest().body(Map.of("message", "equipmentId is required"));
+            }
             String email = SecurityContextHolder.getContext().getAuthentication().getName();
             return ResponseEntity.ok(waitlistService.joinWaitlist(equipmentId, email));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<?> cancelWaitlist(@PathVariable Integer id) {
+        try {
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            waitlistService.cancelWaitlist(id, email);
+            return ResponseEntity.ok(Map.of("message", "Waitlist entry cancelled successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
 
@@ -37,9 +57,6 @@ public class WaitlistController {
     @GetMapping("/my")
     public ResponseEntity<List<Waitlist>> getMyWaitlist() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
-        List<Waitlist> list = waitlistService.findAll().stream()
-                .filter(w -> w.getUser().getEmail().equals(email))
-                .toList();
-        return ResponseEntity.ok(list);
+        return ResponseEntity.ok(waitlistService.findForUser(email));
     }
 }

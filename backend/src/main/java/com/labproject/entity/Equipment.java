@@ -50,6 +50,9 @@ public class Equipment {
     @Column(name = "contact_email", length = 100)
     private String contactEmail;
 
+    @Column(name = "image_url", columnDefinition = "TEXT")
+    private String imageUrl;
+
     @Column(columnDefinition = "TEXT")
     private String specifications;
 

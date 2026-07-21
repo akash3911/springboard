@@ -17,6 +17,7 @@ public class EquipmentRequest {
     private Boolean isRestricted;
     private String roomNumber;
     private String contactEmail;
+    private String imageUrl;
     private String specifications;
     private String description;
 }
