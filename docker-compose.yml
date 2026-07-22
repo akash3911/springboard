@@ -10,8 +10,6 @@ services:
       POSTGRES_DB: labportal
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d labportal"]
       interval: 5s
@@ -43,6 +41,3 @@ services:
       - BACKEND_URL=http://backend:8080
     depends_on:
       - backend
-
-volumes:
-  postgres_data:
