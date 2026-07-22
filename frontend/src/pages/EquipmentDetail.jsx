@@ -156,7 +156,8 @@ export default function EquipmentDetail() {
 
   const canScheduleMaint = (role === 'LAB_MANAGER' && isOwnDept);
 
-  const isBeingUsed = equipment?.status === 'BOOKED' || equipment?.status === 'BOOKING_PENDING' || equipment?.status === 'UNDER_MAINTENANCE' || Boolean(activeBooking) || Boolean(anyPendingBooking);
+  const isCurrentlyUsed = equipment?.status === 'BOOKED' || Boolean(activeBooking);
+  const isBeingUsed = isCurrentlyUsed || equipment?.status === 'UNDER_MAINTENANCE' || equipment?.status === 'OUT_OF_SERVICE';
 
   const handleBook = async (e) => {
     e.preventDefault();
@@ -369,7 +370,7 @@ export default function EquipmentDetail() {
                 <div>
                   <h4 className="text-xs uppercase font-bold tracking-wider text-amber-900">Booking Request Pending</h4>
                   <p className="text-xs text-amber-800 mt-1">
-                    Another user has submitted a booking request for this equipment awaiting manager approval. You can join the waitlist below.
+                    Another user has submitted a booking request for this equipment awaiting manager approval. You can still submit your own booking request.
                   </p>
                 </div>
               </div>
@@ -476,8 +477,8 @@ export default function EquipmentDetail() {
             </button>
           )}
 
-          {/* Join Waitlist shown ONLY when equipment is currently being used by someone / booked / booking pending */}
-          {canJoinWaitlist && isBeingUsed && !userWaitlistEntry && (
+          {/* Join Waitlist shown ONLY when equipment is currently being used by someone (approved booking) and user does not have a pending booking */}
+          {canJoinWaitlist && isCurrentlyUsed && !userWaitlistEntry && !userPendingBooking && (
             <button
               onClick={() => {
                 setShowWaitlistForm(!showWaitlistForm);

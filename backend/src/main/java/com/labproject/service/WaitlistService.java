@@ -41,6 +41,20 @@ public class WaitlistService {
             throw new RuntimeException("You are already on the active waitlist for this equipment");
         }
 
+        // Prevent joining waitlist if user has a pending booking for this equipment
+        boolean hasPendingBooking = bookingRepository.findByEquipmentId(equipment.getId()).stream()
+                .anyMatch(b -> b.getUser().getEmail().equals(userEmail) && "PENDING".equals(b.getStatus()));
+        if (hasPendingBooking) {
+            throw new RuntimeException("You cannot join the waitlist because you already have a pending booking request for this equipment.");
+        }
+
+        // Waitlist is only allowed when someone is currently using the equipment (i.e. has an APPROVED booking)
+        boolean hasApprovedBooking = bookingRepository.findByEquipmentId(equipment.getId()).stream()
+                .anyMatch(b -> "APPROVED".equals(b.getStatus()));
+        if (!hasApprovedBooking) {
+            throw new RuntimeException("You can only join the waitlist when the equipment is currently in use (has approved bookings).");
+        }
+
         Waitlist waitlist = new Waitlist();
         waitlist.setEquipment(equipment);
         waitlist.setUser(user);

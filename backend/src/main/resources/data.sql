@@ -49,24 +49,35 @@ ON CONFLICT DO NOTHING;
 -- Equipment
 INSERT INTO equipment (id, department_id, name, category, manufacturer, model, serial_number, status, purchase_date, is_shared, is_restricted, room_number, contact_email, image_url, specifications, description) VALUES
 -- MIT CS (Dept 1)
-(1, 1, '3D Printer', 'Fabrication', 'Prusa', 'MK4', 'SN-3DP-001', 'AVAILABLE', '2024-01-15', FALSE, FALSE, 'Room 101', 'manager@mit.edu', 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80', 'Build volume: 250x210x220mm', 'High-quality FDM 3D printer for prototyping'),
+(1, 1, '3D Printer', 'Fabrication', 'Prusa', 'MK4', 'SN-3DP-001', 'BOOKING_PENDING', '2024-01-15', FALSE, FALSE, 'Room 101', 'manager@mit.edu', 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80', 'Build volume: 250x210x220mm', 'High-quality FDM 3D printer for prototyping'),
 (2, 1, 'VR Headset', 'Imaging', 'Meta', 'Quest 3', 'SN-VR-002', 'AVAILABLE', '2024-02-10', FALSE, FALSE, 'Room 102', 'manager@mit.edu', 'https://images.unsplash.com/photo-1622979135225-d2ba269bc1bd?auto=format&fit=crop&w=800&q=80', '128GB Storage, 4K Display', 'Virtual reality headset for visualization studies'),
 -- MIT Physics (Dept 2)
 (3, 2, 'Laser Interferometer', 'Optics', 'Thorlabs', 'INT-500', 'SN-LAS-003', 'AVAILABLE', '2023-08-20', FALSE, TRUE, 'Room 201', 'depthead@mit.edu', 'https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=800&q=80', 'Wavelength: 632.8nm, Class 3B', 'Advanced restricted laser interferometer'),
-(4, 2, 'Cryostat', 'Cryogenics', 'Oxford Instruments', 'Optistat', 'SN-CRY-004', 'AVAILABLE', '2023-11-05', TRUE, FALSE, 'Room 202', 'depthead@mit.edu', 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=800&q=80', 'Temperature range: 1.5K - 300K', 'Helium cryostat for low-temperature measurements'),
+(4, 2, 'Cryostat', 'Cryogenics', 'Oxford Instruments', 'Optistat', 'SN-CRY-004', 'BOOKED', '2023-11-05', TRUE, FALSE, 'Room 202', 'depthead@mit.edu', 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=800&q=80', 'Temperature range: 1.5K - 300K', 'Helium cryostat for low-temperature measurements'),
 -- IIT Biology (Dept 3)
 (5, 3, 'PCR Thermal Cycler', 'Biology', 'Bio-Rad', 'T100', 'SN-PCR-005', 'AVAILABLE', '2024-03-01', FALSE, FALSE, 'Room 301', 'manager@iit.edu', 'https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=800&q=80', '96-well, gradient capable', 'Thermal cycler for DNA amplification'),
 (6, 3, 'Fluorescence Microscope', 'Imaging', 'Nikon', 'Eclipse', 'SN-MIC-006', 'UNDER_MAINTENANCE', '2023-05-18', FALSE, FALSE, 'Room 302', 'manager@iit.edu', 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80', 'Magnification: 1000x', 'Fluorescence inverted microscope'),
-(7, 3, 'Centrifuge', 'Biology', 'Eppendorf', '5424R', 'SN-CEN-007', 'AVAILABLE', '2023-09-12', TRUE, FALSE, 'Room 303', 'manager@iit.edu', 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?auto=format&fit=crop&w=800&q=80', 'Max speed: 15000 rpm', 'High-speed refrigerated centrifuge'),
+(7, 3, 'Centrifuge', 'Biology', 'Eppendorf', '5424R', 'SN-CEN-007', 'BOOKED', '2023-09-12', TRUE, FALSE, 'Room 303', 'manager@iit.edu', 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?auto=format&fit=crop&w=800&q=80', 'Max speed: 15000 rpm', 'High-speed refrigerated centrifuge'),
 -- VIT Chemistry (Dept 4)
 (8, 4, 'DNA Sequencer', 'Genetics', 'Illumina', 'MiSeq', 'SN-SEQ-008', 'AVAILABLE', '2024-04-10', TRUE, TRUE, 'Room 401', 'head@vit.edu', 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=800&q=80', 'Output: Up to 15 Gb', 'Restricted and shared high-throughput DNA sequencer'),
-(9, 4, 'Autoclave', 'Sterilization', 'Tuttnauer', '3870M', 'SN-AUT-009', 'AVAILABLE', '2024-05-15', FALSE, FALSE, 'Room 402', 'head@vit.edu', 'https://images.unsplash.com/photo-1583912267670-657592e914a6?auto=format&fit=crop&w=800&q=80', 'Volume: 85 Liters', 'Steam sterilizer for biology lab prep')
+(9, 4, 'Autoclave', 'Sterilization', 'Tuttnauer', '3870M', 'SN-AUT-009', 'AVAILABLE', '2024-05-15', FALSE, FALSE, 'Room 402', 'head@vit.edu', 'https://images.unsplash.com/photo-1583912267670-657592e914a6?auto=format&fit=crop&w=800&q=80', 'Volume: 85 Liters', 'Steam sterilizer for biology lab prep'),
+-- New MIT CS / Physics Equipments to showcase all booking scenarios
+(10, 1, 'High-Performance GPU Cluster', 'Computation', 'NVIDIA', 'DGX H100', 'SN-GPU-010', 'BOOKED', '2024-05-20', TRUE, FALSE, 'Room 103', 'manager@mit.edu', 'https://images.unsplash.com/photo-1591453089816-0fbb971b454c?auto=format&fit=crop&w=800&q=80', '8x NVIDIA H100 GPUs, 640GB VRAM, Dual AMD EPYC 9654', 'Ultra-fast GPU cluster for deep learning and large language model training.'),
+(11, 1, 'Digital Oscilloscope', 'Electronics', 'Tektronix', 'MSO64B', 'SN-OSC-011', 'BOOKING_PENDING', '2024-06-12', FALSE, FALSE, 'Room 104', 'manager@mit.edu', 'https://images.unsplash.com/photo-1517420784537-d3c323063f2c?auto=format&fit=crop&w=800&q=80', 'Bandwidth: 2 GHz, 4 Channels, 10 GS/s sample rate', 'High-bandwidth digital oscilloscope for signal analysis and testing.'),
+(12, 1, 'CNC Router Machine', 'Fabrication', 'ShopBot', 'PRSalpha', 'SN-CNC-012', 'AVAILABLE', '2024-03-10', TRUE, FALSE, 'Room 105', 'manager@mit.edu', 'https://images.unsplash.com/photo-1615840287214-7fe58a8f3685?auto=format&fit=crop&w=800&q=80', 'Work Area: 2440x1220mm, Spindle: 2.2kW HSD', 'High-speed computer-controlled cutting machine for wood, plastic, and soft metals.'),
+(13, 2, 'Chemical Fume Hood', 'Safety', 'Labconco', 'Protector Echo', 'SN-FUM-013', 'UNDER_MAINTENANCE', '2023-09-05', FALSE, FALSE, 'Room 203', 'depthead@mit.edu', 'https://images.unsplash.com/photo-1576086213369-97a306d36557?auto=format&fit=crop&w=800&q=80', 'Width: 6 feet, By-pass airflow design', 'Restricted fume hood for ventilation and safety during hazardous chemistry experiments.'),
+(14, 2, 'Sputter Coater', 'Material Science', 'Cressington', '108Auto', 'SN-COA-014', 'BOOKED', '2023-12-15', TRUE, FALSE, 'Room 204', 'depthead@mit.edu', 'https://images.unsplash.com/photo-1605810230434-7631ac76ec81?auto=format&fit=crop&w=800&q=80', 'Target: Gold/Palladium, Automatic thickness controller', 'High-resolution sputter coater for SEM sample preparation.')
 ON CONFLICT DO NOTHING;
 
 -- Bookings
 INSERT INTO bookings (id, equipment_id, user_id, start_time, end_time, purpose, status) VALUES
-(1, 1, 2, '2026-07-20 09:00:00', '2026-07-20 12:00:00', 'Print prototypes for robotics class', 'PENDING'),
-(2, 7, 8, '2026-07-18 10:00:00', '2026-07-18 13:00:00', 'DNA sequencing prep extraction', 'APPROVED')
+(1, 1, 2, '2026-07-24 09:00:00', '2026-07-24 12:00:00', 'Print prototypes for robotics class', 'PENDING'),
+(2, 7, 8, '2026-07-24 10:00:00', '2026-07-24 13:00:00', 'DNA sequencing prep extraction', 'APPROVED'),
+(3, 10, 3, '2026-07-23 09:00:00', '2026-07-25 18:00:00', 'Train LLM on high-performance GPUs', 'APPROVED'),
+(4, 11, 14, '2026-07-24 10:00:00', '2026-07-24 14:00:00', 'Test frequency response of filter circuits', 'PENDING'),
+(5, 14, 15, '2026-07-23 10:00:00', '2026-07-25 15:00:00', 'Coat SEM samples with gold palladium', 'APPROVED'),
+(6, 14, 2, '2026-07-26 09:00:00', '2026-07-26 12:00:00', 'Coat specimens for materials course project', 'PENDING'),
+(7, 4, 3, '2026-07-24 13:00:00', '2026-07-24 17:00:00', 'Measure low-temperature physics characteristics', 'APPROVED')
 ON CONFLICT DO NOTHING;
 
 -- Maintenance
@@ -87,7 +98,7 @@ ON CONFLICT DO NOTHING;
 -- Waitlist
 INSERT INTO waitlist (id, equipment_id, user_id, request_time, status) VALUES
 (1, 4, 2, '2026-07-16 10:00:00', 'PENDING'),
-(2, 1, 3, '2026-07-17 11:30:00', 'PENDING')
+(2, 10, 2, '2026-07-17 11:30:00', 'PENDING')
 ON CONFLICT DO NOTHING;
 
 -- Notifications
