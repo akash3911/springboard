@@ -38,7 +38,10 @@ CREATE TABLE IF NOT EXISTS equipment (
     contact_email VARCHAR(100),
     image_url TEXT,
     specifications TEXT,
-    description TEXT
+    description TEXT,
+    operating_instructions TEXT,
+    safety_guidelines TEXT,
+    maintenance_guide TEXT
 );
 
 CREATE TABLE IF NOT EXISTS bookings (
@@ -88,3 +91,7 @@ CREATE TABLE IF NOT EXISTS notifications (
     is_read BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+ALTER TABLE equipment ADD COLUMN IF NOT EXISTS operating_instructions TEXT;
+ALTER TABLE equipment ADD COLUMN IF NOT EXISTS safety_guidelines TEXT;
+ALTER TABLE equipment ADD COLUMN IF NOT EXISTS maintenance_guide TEXT;

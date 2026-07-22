@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/axios';
@@ -13,6 +13,8 @@ import {
   UserCheck,
   CheckCircle2,
   Building2,
+  BookOpen,
+  ShieldAlert,
 } from 'lucide-react';
 
 const statusColors = {
@@ -24,19 +26,7 @@ const statusColors = {
 };
 
 const getEquipmentImage = (eq) => {
-  if (eq?.imageUrl) return eq.imageUrl;
-  const name = (eq?.name || '').toLowerCase();
-  const cat = (eq?.category || '').toLowerCase();
-
-  if (name.includes('3d printer')) return 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=800&q=80';
-  if (name.includes('vr') || name.includes('headset')) return 'https://images.unsplash.com/photo-1622979135225-d2ba269bc1bd?auto=format&fit=crop&w=800&q=80';
-  if (name.includes('laser') || cat.includes('optics')) return 'https://images.unsplash.com/photo-1507668077129-56e32842fceb?auto=format&fit=crop&w=800&q=80';
-  if (name.includes('cryostat') || cat.includes('cryo')) return 'https://images.unsplash.com/photo-1532094349884-543bc11b234d?auto=format&fit=crop&w=800&q=80';
-  if (name.includes('pcr') || cat.includes('biology')) return 'https://images.unsplash.com/photo-1579154204601-01588f351e67?auto=format&fit=crop&w=800&q=80';
-  if (name.includes('microscope') || cat.includes('imaging')) return 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=80';
-  if (name.includes('centrifuge')) return 'https://images.unsplash.com/photo-1581093588401-fbb62a02f120?auto=format&fit=crop&w=800&q=80';
-  if (name.includes('sequencer') || cat.includes('chemistry') || cat.includes('genetics')) return 'https://images.unsplash.com/photo-1532187863486-abf9dbad1b69?auto=format&fit=crop&w=800&q=80';
-  return 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80';
+  return eq?.imageUrl || '';
 };
 
 export default function EquipmentDetail() {
@@ -55,7 +45,38 @@ export default function EquipmentDetail() {
   const [showWaitlistForm, setShowWaitlistForm] = useState(false);
   const [showMaintenanceForm, setShowMaintenanceForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [showManualModal, setShowManualModal] = useState(false);
   const [technicians, setTechnicians] = useState([]);
+
+  const bookingFormRef = useRef(null);
+  const waitlistFormRef = useRef(null);
+  const maintenanceFormRef = useRef(null);
+  const editFormRef = useRef(null);
+
+  useEffect(() => {
+    if (showBookForm && bookingFormRef.current) {
+      bookingFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showBookForm]);
+
+  useEffect(() => {
+    if (showWaitlistForm && waitlistFormRef.current) {
+      waitlistFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showWaitlistForm]);
+
+  useEffect(() => {
+    if (showMaintenanceForm && maintenanceFormRef.current) {
+      maintenanceFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showMaintenanceForm]);
+
+  useEffect(() => {
+    if (showEditForm && editFormRef.current) {
+      editFormRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [showEditForm]);
   const [bookForm, setBookForm] = useState({
     startTime: '',
     endTime: '',
@@ -317,15 +338,11 @@ export default function EquipmentDetail() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           {/* Left: Equipment Image */}
           <div className="md:col-span-1">
-            <div className="w-full h-64 bg-gray-100 rounded-xl overflow-hidden border border-gray-200 shadow-sm relative">
+            <div className="w-full h-64 bg-gray-50 rounded-xl overflow-hidden border border-gray-200 shadow-sm relative flex items-center justify-center p-2">
               <img
                 src={getEquipmentImage(equipment)}
                 alt={equipment.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = 'https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?auto=format&fit=crop&w=800&q=80';
-                }}
+                className="max-w-full max-h-full object-contain"
               />
             </div>
           </div>
@@ -456,6 +473,28 @@ export default function EquipmentDetail() {
           </div>
         )}
 
+        {/* Manual Button (Above booking) */}
+        {equipment && (equipment.operatingInstructions || equipment.safetyGuidelines || equipment.maintenanceGuide) && (
+          <div className="mb-4 pt-4 border-t border-gray-200">
+            <button
+              onClick={() => {
+                setActiveTab(
+                  equipment.operatingInstructions
+                    ? 'sop'
+                    : equipment.safetyGuidelines
+                    ? 'safety'
+                    : 'maintenance'
+                );
+                setShowManualModal(true);
+              }}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:from-blue-750 hover:to-indigo-750 transition-all cursor-pointer shadow-md hover:shadow-lg"
+            >
+              <BookOpen size={16} />
+              Open Operations Manual & Documentation
+            </button>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex gap-3 pt-4 border-t border-gray-200 flex-wrap">
           {canBook && !isBeingUsed && !userPendingBooking && (
@@ -543,7 +582,7 @@ export default function EquipmentDetail() {
 
       {/* Booking Form Modal */}
       {showBookForm && (
-        <div className="mt-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div ref={bookingFormRef} className="mt-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 mb-2">Book Equipment</h3>
           <form onSubmit={handleBook} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -608,7 +647,7 @@ export default function EquipmentDetail() {
 
       {/* Waitlist Form Modal (with start/end time selection dimmed prior to current user endtime) */}
       {showWaitlistForm && (
-        <div className="mt-4 bg-white border border-purple-200 rounded-xl p-5 shadow-sm bg-purple-50/40">
+        <div ref={waitlistFormRef} className="mt-4 bg-white border border-purple-200 rounded-xl p-5 shadow-sm bg-purple-50/40">
           <h3 className="text-lg font-semibold text-purple-900 mb-1">Join Equipment Waitlist</h3>
           {activeBooking && (
             <p className="text-xs text-purple-800 bg-purple-100/70 border border-purple-200 p-2.5 rounded mb-4">
@@ -665,7 +704,7 @@ export default function EquipmentDetail() {
 
       {/* Maintenance Form Modal */}
       {showMaintenanceForm && (
-        <div className="mt-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div ref={maintenanceFormRef} className="mt-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Schedule Maintenance</h3>
           <form onSubmit={handleScheduleMaintenance} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -734,7 +773,7 @@ export default function EquipmentDetail() {
 
       {/* Edit Form Modal */}
       {showEditForm && (
-        <div className="mt-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
+        <div ref={editFormRef} className="mt-4 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
           <h3 className="text-lg font-semibold text-gray-800 mb-4">Edit Equipment</h3>
           <form onSubmit={handleEdit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -819,6 +858,172 @@ export default function EquipmentDetail() {
               </button>
             </div>
           </form>
+        </div>
+      )}
+
+      {/* Manual Modal Overlay */}
+      {showManualModal && equipment && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[85vh] overflow-hidden shadow-2xl flex flex-col border border-gray-200">
+            {/* Modal Header */}
+            <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+              <div className="flex items-center gap-2">
+                <BookOpen size={20} className="text-blue-600" />
+                <div>
+                  <h3 className="font-bold text-gray-800 text-lg">{equipment.name} — Operations Manual</h3>
+                  <p className="text-xs text-gray-500">{equipment.manufacturer} {equipment.model}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowManualModal(false)}
+                className="text-gray-400 hover:text-gray-600 cursor-pointer p-1.5 rounded-full hover:bg-gray-100 transition-colors text-sm"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Body: Navigation & Tabs */}
+            <div className="flex border-b border-gray-200 bg-gray-50/30 overflow-x-auto">
+              <button
+                onClick={() => setActiveTab('overview')}
+                className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 whitespace-nowrap cursor-pointer transition-all ${
+                  activeTab === 'overview'
+                    ? 'border-blue-600 text-blue-600 bg-white'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-150/50'
+                }`}
+              >
+                Overview & Specs
+              </button>
+              {equipment.operatingInstructions && (
+                <button
+                  onClick={() => setActiveTab('sop')}
+                  className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 whitespace-nowrap cursor-pointer transition-all ${
+                    activeTab === 'sop'
+                      ? 'border-blue-600 text-blue-600 bg-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-150/50'
+                }`}
+              >
+                Operating Procedures
+              </button>
+              )}
+              {equipment.safetyGuidelines && (
+                <button
+                  onClick={() => setActiveTab('safety')}
+                  className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 whitespace-nowrap cursor-pointer transition-all ${
+                    activeTab === 'safety'
+                      ? 'border-blue-600 text-blue-600 bg-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-150/50'
+                  }`}
+                >
+                  Safety Guidelines
+                </button>
+              )}
+              {equipment.maintenanceGuide && (
+                <button
+                  onClick={() => setActiveTab('maintenance')}
+                  className={`px-5 py-3.5 text-xs font-bold uppercase tracking-wider border-b-2 whitespace-nowrap cursor-pointer transition-all ${
+                    activeTab === 'maintenance'
+                      ? 'border-blue-600 text-blue-600 bg-white'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-150/50'
+                  }`}
+                >
+                  Maintenance Protocols
+                </button>
+              )}
+            </div>
+
+            {/* Modal Content Area */}
+            <div className="p-6 overflow-y-auto flex-1 text-sm text-gray-705 space-y-4">
+              {activeTab === 'overview' && (
+                <div className="space-y-4">
+                  {equipment.description && (
+                    <div>
+                      <h4 className="font-bold text-gray-500 mb-1.5 text-xs uppercase tracking-wider">Description</h4>
+                      <p className="leading-relaxed text-gray-600">{equipment.description}</p>
+                    </div>
+                  )}
+                  {equipment.specifications && (
+                    <div>
+                      <h4 className="font-bold text-gray-500 mb-2 text-xs uppercase tracking-wider">Technical Specifications</h4>
+                      <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 text-xs font-mono text-gray-700 whitespace-pre-wrap leading-relaxed">
+                        {equipment.specifications}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'sop' && equipment.operatingInstructions && (
+                <div>
+                  <h4 className="font-bold text-gray-500 mb-4 text-xs uppercase tracking-wider">Standard Operating Procedures (SOP)</h4>
+                  <ol className="space-y-3">
+                    {equipment.operatingInstructions.split('\n').filter(Boolean).map((step, idx) => (
+                      <li key={idx} className="flex gap-3 items-start">
+                        <span className="flex items-center justify-center bg-blue-50 text-blue-600 font-bold rounded-full w-6 h-6 text-xs shrink-0 mt-0.5 shadow-sm">
+                          {idx + 1}
+                        </span>
+                        <span className="leading-relaxed text-gray-600">{step}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {activeTab === 'safety' && equipment.safetyGuidelines && (
+                <div>
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3 mb-5">
+                    <ShieldAlert className="text-red-600 shrink-0 mt-0.5" size={20} />
+                    <div>
+                      <h4 className="font-bold text-red-900 text-sm">Critical Hazards & Protective Protocol</h4>
+                      <p className="text-xs text-red-700 mt-0.5 leading-relaxed">
+                        Ensure you are trained and equipped with correct PPE before handling this machinery.
+                      </p>
+                    </div>
+                  </div>
+                  <ul className="space-y-3 pl-1 text-gray-600 list-disc list-inside">
+                    {equipment.safetyGuidelines.split('\n').filter(Boolean).map((rule, idx) => {
+                      const parts = rule.split(':');
+                      if (parts.length > 1) {
+                        return (
+                          <li key={idx} className="leading-relaxed">
+                            <span className="font-bold text-gray-800">{parts[0]}:</span>
+                            {parts.slice(1).join(':')}
+                          </li>
+                        );
+                      }
+                      return <li key={idx} className="leading-relaxed">{rule}</li>;
+                    })}
+                  </ul>
+                </div>
+              )}
+
+              {activeTab === 'maintenance' && equipment.maintenanceGuide && (
+                <div>
+                  <h4 className="font-bold text-gray-500 mb-4 text-xs uppercase tracking-wider">Maintenance & Cleaning Manual</h4>
+                  <ul className="space-y-3.5">
+                    {equipment.maintenanceGuide.split('\n').filter(Boolean).map((step, idx) => (
+                      <li key={idx} className="flex gap-3 items-start">
+                        <span className="flex items-center justify-center bg-emerald-50 text-emerald-600 font-bold rounded-lg w-6 h-6 text-xs shrink-0 mt-0.5 shadow-sm">
+                          ✓
+                        </span>
+                        <span className="leading-relaxed text-gray-600">{step}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
+              <button
+                onClick={() => setShowManualModal(false)}
+                className="bg-gray-800 text-white px-5 py-2 rounded-lg text-sm hover:bg-gray-700 font-semibold cursor-pointer shadow-sm transition-all"
+              >
+                Close Manual
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -20,4 +20,7 @@ public class EquipmentRequest {
     private String imageUrl;
     private String specifications;
     private String description;
+    private String operatingInstructions;
+    private String safetyGuidelines;
+    private String maintenanceGuide;
 }

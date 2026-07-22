@@ -114,5 +114,8 @@ public class EquipmentService {
         equipment.setImageUrl(request.getImageUrl());
         equipment.setSpecifications(request.getSpecifications());
         equipment.setDescription(request.getDescription());
+        equipment.setOperatingInstructions(request.getOperatingInstructions());
+        equipment.setSafetyGuidelines(request.getSafetyGuidelines());
+        equipment.setMaintenanceGuide(request.getMaintenanceGuide());
     }
 }

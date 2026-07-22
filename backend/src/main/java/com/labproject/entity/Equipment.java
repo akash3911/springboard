@@ -58,4 +58,13 @@ public class Equipment {
 
     @Column(columnDefinition = "TEXT")
     private String description;
+
+    @Column(name = "operating_instructions", columnDefinition = "TEXT")
+    private String operatingInstructions;
+
+    @Column(name = "safety_guidelines", columnDefinition = "TEXT")
+    private String safetyGuidelines;
+
+    @Column(name = "maintenance_guide", columnDefinition = "TEXT")
+    private String maintenanceGuide;
 }
