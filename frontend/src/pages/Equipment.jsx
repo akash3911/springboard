@@ -20,10 +20,9 @@ export default function Equipment() {
   const [institutions, setInstitutions] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
   const [institutionFilter, setInstitutionFilter] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
-  const [categories, setCategories] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [addForm, setAddForm] = useState({
     name: '',
@@ -48,17 +47,17 @@ export default function Equipment() {
   useEffect(() => {
     loadEquipment();
     loadInstitutions();
-    if (canManage) {
-      loadDepartments();
-    }
+    loadDepartments();
   }, []);
+
+  useEffect(() => {
+    setDepartmentFilter('');
+  }, [institutionFilter]);
 
   const loadEquipment = async () => {
     try {
       const res = await api.get('/equipment');
       setEquipment(res.data);
-      const cats = [...new Set(res.data.map((e) => e.category).filter(Boolean))];
-      setCategories(cats);
     } catch (err) {
       toast.error('Failed to load equipment');
     }
@@ -138,12 +137,12 @@ export default function Equipment() {
       e.manufacturer?.toLowerCase().includes(search.toLowerCase());
 
     const matchStatus = !statusFilter || e.status === statusFilter;
-    const matchCategory = !categoryFilter || e.category === categoryFilter;
+    const matchDepartment = !departmentFilter || e.department?.id === Number(departmentFilter);
     
     const eqInstId = e.department?.institution?.id;
     const matchInstitution = !institutionFilter || eqInstId === Number(institutionFilter);
 
-    return matchSearch && matchStatus && matchCategory && matchInstitution;
+    return matchSearch && matchStatus && matchDepartment && matchInstitution;
   });
 
   return (
@@ -199,18 +198,23 @@ export default function Equipment() {
           </select>
         )}
 
-        {/* Category Filter */}
+        {/* Department Filter */}
         <select
-          value={categoryFilter}
-          onChange={(e) => setCategoryFilter(e.target.value)}
+          value={departmentFilter}
+          onChange={(e) => setDepartmentFilter(e.target.value)}
           className="border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
         >
-          <option value="">All Categories</option>
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>
-              {cat}
-            </option>
-          ))}
+          <option value="">All Departments</option>
+          {(() => {
+            const displayedDepartments = institutionFilter
+              ? departments.filter(d => d.institution?.id === Number(institutionFilter))
+              : departments;
+            return displayedDepartments.map((dept) => (
+              <option key={dept.id} value={dept.id}>
+                {dept.name} {!institutionFilter && dept.institution?.name ? `(${dept.institution.name})` : ''}
+              </option>
+            ));
+          })()}
         </select>
 
         {/* Status Filter */}
