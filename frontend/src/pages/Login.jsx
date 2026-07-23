@@ -1,22 +1,37 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import toast from 'react-hot-toast';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const { user, login } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      // API call here
-      console.log('Login attempt:', { email, password });
+      await login(email, password);
+      toast.success('Successfully signed in!');
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       console.error('Login error:', err);
+      const errMsg = err.response?.data?.error || 'Invalid email or password';
+      toast.error(errMsg);
     } finally {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-white text-neutral-950 flex items-center justify-center">
