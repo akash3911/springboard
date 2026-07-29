@@ -35,4 +35,13 @@ public class Booking {
 
     @Column(name = "rejection_reason", length = 255)
     private String rejectionReason;
+
+    @Column(name = "total_cost")
+    private Double totalCost = 0.0;
+
+    @Column(name = "is_cross_institution")
+    private Boolean isCrossInstitution = false;
+
+    @Column(name = "billing_status", length = 50)
+    private String billingStatus = "PENDING";
 }

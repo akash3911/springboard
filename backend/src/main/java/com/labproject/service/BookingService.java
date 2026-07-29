@@ -4,12 +4,15 @@ import com.labproject.dto.BookingRequest;
 import com.labproject.entity.Booking;
 import com.labproject.entity.Equipment;
 import com.labproject.entity.User;
+import com.labproject.entity.Waitlist;
 import com.labproject.repository.BookingRepository;
 import com.labproject.repository.EquipmentRepository;
 import com.labproject.repository.UserRepository;
+import com.labproject.repository.WaitlistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -20,6 +23,8 @@ public class BookingService {
     private final BookingRepository bookingRepository;
     private final EquipmentRepository equipmentRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final WaitlistRepository waitlistRepository;
 
     public List<Booking> findAll() {
         return bookingRepository.findAll();
@@ -94,6 +99,20 @@ public class BookingService {
             }
         }
 
+        // Calculate Cost
+        long minutes = Duration.between(newStart, newEnd).toMinutes();
+        double hours = Math.max(0.5, minutes / 60.0);
+        double rate = equipment.getHourlyRate() != null ? equipment.getHourlyRate() : 45.0;
+        double totalCost = Math.round(hours * rate * 100.0) / 100.0;
+
+        // Determine if Cross-Institution
+        Integer userInstId = user.getInstitution() != null ? user.getInstitution().getId() : 
+                            (user.getDepartment() != null && user.getDepartment().getInstitution() != null ? user.getDepartment().getInstitution().getId() : null);
+        Integer eqInstId = equipment.getDepartment() != null && equipment.getDepartment().getInstitution() != null ?
+                            equipment.getDepartment().getInstitution().getId() : null;
+
+        boolean isCross = userInstId != null && eqInstId != null && !userInstId.equals(eqInstId);
+
         Booking booking = new Booking();
         booking.setEquipment(equipment);
         booking.setUser(user);
@@ -101,8 +120,20 @@ public class BookingService {
         booking.setEndTime(request.getEndTime());
         booking.setPurpose(request.getPurpose());
         booking.setStatus("PENDING");
+        booking.setTotalCost(totalCost);
+        booking.setIsCrossInstitution(isCross);
+        booking.setBillingStatus("PENDING");
 
-        return bookingRepository.save(booking);
+        Booking saved = bookingRepository.save(booking);
+
+        // Send notification to user
+        try {
+            notificationService.create(user.getId(), 
+                "Booking request submitted for " + equipment.getName() + " ($" + totalCost + "). Awaiting manager approval.",
+                "BOOKING");
+        } catch (Exception ignored) {}
+
+        return saved;
     }
 
     public Booking approveBooking(Integer id) {
@@ -129,6 +160,13 @@ public class BookingService {
         equipment.setStatus("BOOKED");
         equipmentRepository.save(equipment);
 
+        // Notify user
+        try {
+            notificationService.create(booking.getUser().getId(),
+                "Your booking request for " + equipment.getName() + " has been APPROVED!",
+                "BOOKING");
+        } catch (Exception ignored) {}
+
         return saved;
     }
 
@@ -139,6 +177,16 @@ public class BookingService {
         Booking saved = bookingRepository.save(booking);
 
         updateEquipmentStatusIfFreed(booking.getEquipment());
+
+        // Notify user
+        try {
+            notificationService.create(booking.getUser().getId(),
+                "Your booking for " + booking.getEquipment().getName() + " was rejected. Reason: " + reason,
+                "BOOKING");
+        } catch (Exception ignored) {}
+
+        checkAndNotifyWaitlist(booking.getEquipment());
+
         return saved;
     }
 
@@ -148,7 +196,46 @@ public class BookingService {
         Booking saved = bookingRepository.save(booking);
 
         updateEquipmentStatusIfFreed(booking.getEquipment());
+
+        // Notify user
+        try {
+            notificationService.create(booking.getUser().getId(),
+                "Your booking for " + booking.getEquipment().getName() + " has been cancelled.",
+                "BOOKING");
+        } catch (Exception ignored) {}
+
+        checkAndNotifyWaitlist(booking.getEquipment());
+
         return saved;
+    }
+
+    public Booking updateBillingStatus(Integer id, String billingStatus) {
+        Booking booking = findById(id);
+        booking.setBillingStatus(billingStatus);
+        Booking saved = bookingRepository.save(booking);
+
+        try {
+            notificationService.create(booking.getUser().getId(),
+                "Billing status for booking #" + booking.getId() + " (" + booking.getEquipment().getName() + ") updated to " + billingStatus,
+                "BILLING");
+        } catch (Exception ignored) {}
+
+        return saved;
+    }
+
+    private void checkAndNotifyWaitlist(Equipment equipment) {
+        if (equipment == null) return;
+        List<Waitlist> pendingWaitlist = waitlistRepository.findByEquipmentId(equipment.getId()).stream()
+                .filter(w -> "PENDING".equals(w.getStatus()))
+                .toList();
+
+        for (Waitlist w : pendingWaitlist) {
+            try {
+                notificationService.create(w.getUser().getId(),
+                    "Good news! A reservation slot for " + equipment.getName() + " has opened up! Visit the equipment page to submit or claim your booking.",
+                    "WAITLIST");
+            } catch (Exception ignored) {}
+        }
     }
 
     private void updateEquipmentStatusIfFreed(Equipment equipment) {
@@ -163,3 +250,4 @@ public class BookingService {
         }
     }
 }
+

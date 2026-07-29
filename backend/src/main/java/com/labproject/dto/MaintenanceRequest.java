@@ -10,4 +10,7 @@ public class MaintenanceRequest {
     private String description;
     private LocalDate nextDueDate;
     private Integer technicianId;
+    private Double cost;
+    private String maintenanceType;
+    private String workOrderNumber;
 }

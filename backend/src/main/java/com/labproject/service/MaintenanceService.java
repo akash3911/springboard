@@ -10,6 +10,7 @@ import com.labproject.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -19,6 +20,7 @@ public class MaintenanceService {
     private final MaintenanceRepository maintenanceRepository;
     private final EquipmentRepository equipmentRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     public List<Maintenance> findAll() {
         return maintenanceRepository.findAll();
@@ -51,15 +53,27 @@ public class MaintenanceService {
 
         Maintenance maintenance = new Maintenance();
         maintenance.setEquipment(equipment);
-        maintenance.setMaintenanceDate(request.getMaintenanceDate());
+        maintenance.setMaintenanceDate(request.getMaintenanceDate() != null ? request.getMaintenanceDate() : LocalDate.now());
         maintenance.setDescription(request.getDescription());
         maintenance.setStatus("PENDING");
         maintenance.setNextDueDate(request.getNextDueDate());
+        maintenance.setCost(request.getCost() != null ? request.getCost() : 150.0);
+        maintenance.setMaintenanceType(request.getMaintenanceType() != null ? request.getMaintenanceType() : "REPAIR");
+        
+        String woNum = request.getWorkOrderNumber() != null ? request.getWorkOrderNumber() :
+                      "WO-" + (System.currentTimeMillis() % 100000);
+        maintenance.setWorkOrderNumber(woNum);
 
         if (request.getTechnicianId() != null) {
             User technician = userRepository.findById(request.getTechnicianId())
                     .orElseThrow(() -> new RuntimeException("Technician not found"));
             maintenance.setTechnician(technician);
+            
+            try {
+                notificationService.create(technician.getId(), 
+                    "New Work Order Assigned: " + woNum + " for " + equipment.getName(), 
+                    "MAINTENANCE");
+            } catch (Exception ignored) {}
         }
 
         return maintenanceRepository.save(maintenance);
@@ -72,8 +86,24 @@ public class MaintenanceService {
         // Set equipment back to AVAILABLE
         Equipment equipment = maintenance.getEquipment();
         equipment.setStatus("AVAILABLE");
+
+        if ("CALIBRATION".equalsIgnoreCase(maintenance.getMaintenanceType())) {
+            equipment.setLastCalibrationDate(LocalDate.now());
+            equipment.setNextCalibrationDate(LocalDate.now().plusMonths(6));
+            equipment.setCalibrationStatus("VALID");
+        }
+
         equipmentRepository.save(equipment);
+
+        if (maintenance.getTechnician() != null) {
+            try {
+                notificationService.create(maintenance.getTechnician().getId(), 
+                    "Work Order " + maintenance.getWorkOrderNumber() + " marked as COMPLETED.", 
+                    "MAINTENANCE");
+            } catch (Exception ignored) {}
+        }
 
         return maintenanceRepository.save(maintenance);
     }
 }
+

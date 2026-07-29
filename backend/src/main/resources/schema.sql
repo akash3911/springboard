@@ -41,7 +41,11 @@ CREATE TABLE IF NOT EXISTS equipment (
     description TEXT,
     operating_instructions TEXT,
     safety_guidelines TEXT,
-    maintenance_guide TEXT
+    maintenance_guide TEXT,
+    hourly_rate NUMERIC(10,2) DEFAULT 45.00,
+    last_calibration_date DATE,
+    next_calibration_date DATE,
+    calibration_status VARCHAR(50) DEFAULT 'VALID'
 );
 
 CREATE TABLE IF NOT EXISTS bookings (
@@ -52,7 +56,10 @@ CREATE TABLE IF NOT EXISTS bookings (
     end_time TIMESTAMP NOT NULL,
     purpose VARCHAR(255) NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
-    rejection_reason VARCHAR(255)
+    rejection_reason VARCHAR(255),
+    total_cost NUMERIC(10,2) DEFAULT 0.00,
+    is_cross_institution BOOLEAN DEFAULT FALSE,
+    billing_status VARCHAR(50) DEFAULT 'PENDING'
 );
 
 CREATE TABLE IF NOT EXISTS maintenance (
@@ -62,7 +69,10 @@ CREATE TABLE IF NOT EXISTS maintenance (
     description VARCHAR(255),
     status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
     next_due_date DATE,
-    technician_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+    technician_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    cost NUMERIC(10,2) DEFAULT 0.00,
+    maintenance_type VARCHAR(50) DEFAULT 'REPAIR',
+    work_order_number VARCHAR(100)
 );
 
 CREATE TABLE IF NOT EXISTS utilization (
@@ -95,3 +105,16 @@ CREATE TABLE IF NOT EXISTS notifications (
 ALTER TABLE equipment ADD COLUMN IF NOT EXISTS operating_instructions TEXT;
 ALTER TABLE equipment ADD COLUMN IF NOT EXISTS safety_guidelines TEXT;
 ALTER TABLE equipment ADD COLUMN IF NOT EXISTS maintenance_guide TEXT;
+ALTER TABLE equipment ADD COLUMN IF NOT EXISTS hourly_rate NUMERIC(10,2) DEFAULT 45.00;
+ALTER TABLE equipment ADD COLUMN IF NOT EXISTS last_calibration_date DATE;
+ALTER TABLE equipment ADD COLUMN IF NOT EXISTS next_calibration_date DATE;
+ALTER TABLE equipment ADD COLUMN IF NOT EXISTS calibration_status VARCHAR(50) DEFAULT 'VALID';
+
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS total_cost NUMERIC(10,2) DEFAULT 0.00;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS is_cross_institution BOOLEAN DEFAULT FALSE;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS billing_status VARCHAR(50) DEFAULT 'PENDING';
+
+ALTER TABLE maintenance ADD COLUMN IF NOT EXISTS cost NUMERIC(10,2) DEFAULT 0.00;
+ALTER TABLE maintenance ADD COLUMN IF NOT EXISTS maintenance_type VARCHAR(50) DEFAULT 'REPAIR';
+ALTER TABLE maintenance ADD COLUMN IF NOT EXISTS work_order_number VARCHAR(100);
+

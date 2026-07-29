@@ -329,3 +329,33 @@ Check rotary pump oil level and color monthly; change oil yearly.
 Replace sputter targets when copper backing layer is visible.'
 WHERE id = 14;
 
+-- Seed Hourly Rates and Calibration Dates
+UPDATE equipment SET hourly_rate = 50.00, last_calibration_date = '2026-03-15', next_calibration_date = '2026-09-15', calibration_status = 'VALID' WHERE id = 1;
+UPDATE equipment SET hourly_rate = 35.00, last_calibration_date = '2026-04-10', next_calibration_date = '2026-10-10', calibration_status = 'VALID' WHERE id = 2;
+UPDATE equipment SET hourly_rate = 75.00, last_calibration_date = '2026-07-01', next_calibration_date = '2026-08-15', calibration_status = 'DUE_SOON' WHERE id = 3;
+UPDATE equipment SET hourly_rate = 90.00, last_calibration_date = '2026-01-20', next_calibration_date = '2026-07-20', calibration_status = 'EXPIRED' WHERE id = 4;
+UPDATE equipment SET hourly_rate = 40.00, last_calibration_date = '2026-05-15', next_calibration_date = '2026-11-15', calibration_status = 'VALID' WHERE id = 5;
+UPDATE equipment SET hourly_rate = 65.00, last_calibration_date = '2025-12-01', next_calibration_date = '2026-06-01', calibration_status = 'EXPIRED' WHERE id = 6;
+UPDATE equipment SET hourly_rate = 45.00, last_calibration_date = '2026-06-10', next_calibration_date = '2026-12-10', calibration_status = 'VALID' WHERE id = 7;
+UPDATE equipment SET hourly_rate = 120.00, last_calibration_date = '2026-07-05', next_calibration_date = '2026-08-05', calibration_status = 'DUE_SOON' WHERE id = 8;
+UPDATE equipment SET hourly_rate = 30.00, last_calibration_date = '2026-02-14', next_calibration_date = '2026-08-14', calibration_status = 'VALID' WHERE id = 9;
+UPDATE equipment SET hourly_rate = 150.00, last_calibration_date = '2026-06-01', next_calibration_date = '2026-12-01', calibration_status = 'VALID' WHERE id = 10;
+UPDATE equipment SET hourly_rate = 55.00, last_calibration_date = '2026-04-20', next_calibration_date = '2026-10-20', calibration_status = 'VALID' WHERE id = 11;
+UPDATE equipment SET hourly_rate = 60.00, last_calibration_date = '2026-05-01', next_calibration_date = '2026-11-01', calibration_status = 'VALID' WHERE id = 12;
+UPDATE equipment SET hourly_rate = 25.00, last_calibration_date = '2026-01-10', next_calibration_date = '2026-07-10', calibration_status = 'EXPIRED' WHERE id = 13;
+UPDATE equipment SET hourly_rate = 80.00, last_calibration_date = '2026-07-02', next_calibration_date = '2026-08-20', calibration_status = 'DUE_SOON' WHERE id = 14;
+
+-- Seed Booking Costs & Cross-Institution Flags
+UPDATE bookings SET total_cost = 150.00, is_cross_institution = FALSE, billing_status = 'PENDING' WHERE id = 1;
+UPDATE bookings SET total_cost = 135.00, is_cross_institution = TRUE, billing_status = 'BILLED' WHERE id = 2;
+UPDATE bookings SET total_cost = 850.00, is_cross_institution = FALSE, billing_status = 'PAID' WHERE id = 3;
+UPDATE bookings SET total_cost = 220.00, is_cross_institution = FALSE, billing_status = 'PENDING' WHERE id = 4;
+UPDATE bookings SET total_cost = 400.00, is_cross_institution = TRUE, billing_status = 'PENDING' WHERE id = 5;
+UPDATE bookings SET total_cost = 240.00, is_cross_institution = FALSE, billing_status = 'PENDING' WHERE id = 6;
+UPDATE bookings SET total_cost = 360.00, is_cross_institution = FALSE, billing_status = 'PAID' WHERE id = 7;
+
+-- Seed Maintenance Costs & Work Orders
+UPDATE maintenance SET cost = 320.00, maintenance_type = 'CALIBRATION', work_order_number = 'WO-1001' WHERE id = 1;
+UPDATE maintenance SET cost = 150.00, maintenance_type = 'PREVENTIVE', work_order_number = 'WO-1002' WHERE id = 2;
+
+

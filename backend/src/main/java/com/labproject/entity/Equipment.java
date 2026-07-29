@@ -67,4 +67,16 @@ public class Equipment {
 
     @Column(name = "maintenance_guide", columnDefinition = "TEXT")
     private String maintenanceGuide;
+
+    @Column(name = "hourly_rate")
+    private Double hourlyRate = 45.0;
+
+    @Column(name = "last_calibration_date")
+    private LocalDate lastCalibrationDate;
+
+    @Column(name = "next_calibration_date")
+    private LocalDate nextCalibrationDate;
+
+    @Column(name = "calibration_status", length = 50)
+    private String calibrationStatus = "VALID";
 }

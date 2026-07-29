@@ -32,4 +32,13 @@ public class Maintenance {
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "technician_id")
     private User technician;
+
+    @Column(name = "cost")
+    private Double cost = 0.0;
+
+    @Column(name = "maintenance_type", length = 50)
+    private String maintenanceType = "REPAIR";
+
+    @Column(name = "work_order_number", length = 100)
+    private String workOrderNumber;
 }

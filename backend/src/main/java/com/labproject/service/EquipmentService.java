@@ -117,5 +117,9 @@ public class EquipmentService {
         equipment.setOperatingInstructions(request.getOperatingInstructions());
         equipment.setSafetyGuidelines(request.getSafetyGuidelines());
         equipment.setMaintenanceGuide(request.getMaintenanceGuide());
+        if (request.getHourlyRate() != null) equipment.setHourlyRate(request.getHourlyRate());
+        if (request.getLastCalibrationDate() != null) equipment.setLastCalibrationDate(request.getLastCalibrationDate());
+        if (request.getNextCalibrationDate() != null) equipment.setNextCalibrationDate(request.getNextCalibrationDate());
+        if (request.getCalibrationStatus() != null) equipment.setCalibrationStatus(request.getCalibrationStatus());
     }
 }

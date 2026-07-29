@@ -86,6 +86,18 @@ public class BookingController {
         }
     }
 
+    @PutMapping("/{id}/billing")
+    public ResponseEntity<?> updateBillingStatus(
+            @PathVariable Integer id,
+            @RequestBody Map<String, String> body) {
+        try {
+            String billingStatus = body.getOrDefault("billingStatus", "BILLED");
+            return ResponseEntity.ok(bookingService.updateBillingStatus(id, billingStatus));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @GetMapping("/waitlist")
     public ResponseEntity<List<Waitlist>> getActiveWaitlist() {
         return ResponseEntity.ok(waitlistService.findAllActive());

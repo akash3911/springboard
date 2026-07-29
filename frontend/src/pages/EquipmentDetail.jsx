@@ -451,6 +451,20 @@ export default function EquipmentDetail() {
                   {waitlistEntries.length} {waitlistEntries.length === 1 ? 'user' : 'users'} waiting
                 </p>
               </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Hourly Usage Rate</p>
+                <p className="font-bold text-emerald-700 text-sm">${equipment.hourlyRate || 45.00}/hr</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Calibration Status</p>
+                <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border inline-block ${
+                  equipment.calibrationStatus === 'EXPIRED' ? 'bg-red-100 text-red-800 border-red-200' :
+                  equipment.calibrationStatus === 'DUE_SOON' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                  'bg-emerald-100 text-emerald-800 border-emerald-200'
+                }`}>
+                  {equipment.calibrationStatus || 'VALID'}
+                </span>
+              </div>
             </div>
           </div>
         </div>
@@ -626,6 +640,26 @@ export default function EquipmentDetail() {
                 className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
+
+            {bookForm.startTime && bookForm.endTime && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-3 flex justify-between items-center text-xs">
+                <div>
+                  <span className="font-bold text-emerald-950">Estimated Usage Cost</span>
+                  <p className="text-[11px] text-emerald-700">Rate: ${equipment.hourlyRate || 45.00}/hr</p>
+                </div>
+                <span className="text-base font-extrabold text-emerald-700">
+                  ${(() => {
+                    const start = new Date(bookForm.startTime);
+                    const end = new Date(bookForm.endTime);
+                    const mins = (end - start) / (1000 * 60);
+                    const hours = Math.max(0.5, mins / 60);
+                    const rate = equipment.hourlyRate || 45.00;
+                    return (hours * rate).toFixed(2);
+                  })()}
+                </span>
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"

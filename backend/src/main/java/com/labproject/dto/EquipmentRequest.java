@@ -23,4 +23,8 @@ public class EquipmentRequest {
     private String operatingInstructions;
     private String safetyGuidelines;
     private String maintenanceGuide;
+    private Double hourlyRate;
+    private LocalDate lastCalibrationDate;
+    private LocalDate nextCalibrationDate;
+    private String calibrationStatus;
 }
