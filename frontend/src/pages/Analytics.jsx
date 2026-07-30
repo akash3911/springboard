@@ -139,7 +139,7 @@ export default function Analytics() {
   // CSV Export Handler
   const handleExportCSV = () => {
     let csvContent = 'data:text/csv;charset=utf-8,';
-    csvContent += 'Equipment ID,Equipment Name,Department,Institution,Hours Booked,Idle Hours,Utilization %,Hourly Rate ($),Calibration Status\n';
+    csvContent += 'Equipment ID,Equipment Name,Department,Institution,Hours Booked,Idle Hours,Utilization %,Hourly Rate (₹),Calibration Status\n';
     equipmentUtilization.forEach((item) => {
       csvContent += `${item.id},"${item.name}","${item.department}","${item.institution}",${item.hoursBooked},${item.idleHours},${item.utilizationPct}%,${item.hourlyRate},${item.calibrationStatus}\n`;
     });
@@ -256,7 +256,7 @@ export default function Analytics() {
             <DollarSign size={18} className="text-emerald-600" />
           </div>
           <div>
-            <div className="text-2xl font-extrabold text-gray-800">${totalRevenueIncurred.toLocaleString()}</div>
+            <div className="text-2xl font-extrabold text-gray-800">₹{totalRevenueIncurred.toLocaleString()}</div>
             <p className="text-[11px] text-gray-500 mt-1">
               From {activeBookingsCount} approved reservations
             </p>
@@ -269,7 +269,7 @@ export default function Analytics() {
             <Building2 size={18} className="text-purple-600" />
           </div>
           <div>
-            <div className="text-2xl font-extrabold text-gray-800">${crossInstRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-extrabold text-gray-800">₹{crossInstRevenue.toLocaleString()}</div>
             <p className="text-[11px] text-purple-600 font-medium mt-1">
               Inter-institution shared billings
             </p>
@@ -390,7 +390,7 @@ export default function Analytics() {
                 <div key={item.id} className="p-2.5 bg-red-50/60 border border-red-100 rounded-lg flex justify-between items-center text-xs">
                   <div>
                     <p className="font-bold text-red-950">{item.name}</p>
-                    <p className="text-[11px] text-red-700">{item.department} • ${item.hourlyRate}/hr</p>
+                    <p className="text-[11px] text-red-700">{item.department} • ₹{item.hourlyRate}/hr</p>
                   </div>
                   <span className="bg-red-600 text-white font-bold px-2 py-0.5 rounded text-[11px]">
                     {item.utilizationPct}%
@@ -416,7 +416,7 @@ export default function Analytics() {
                 <div key={item.id} className="p-2.5 bg-emerald-50/60 border border-emerald-100 rounded-lg flex justify-between items-center text-xs">
                   <div>
                     <p className="font-bold text-emerald-950">{item.name}</p>
-                    <p className="text-[11px] text-emerald-700">{item.department} • ${item.hourlyRate}/hr</p>
+                    <p className="text-[11px] text-emerald-700">{item.department} • ₹{item.hourlyRate}/hr</p>
                   </div>
                   <span className="bg-emerald-600 text-white font-bold px-2 py-0.5 rounded text-[11px]">
                     {item.utilizationPct}%
@@ -442,7 +442,7 @@ export default function Analytics() {
                 <div key={item.id} className="p-2.5 bg-amber-50/60 border border-amber-100 rounded-lg flex justify-between items-center text-xs">
                   <div>
                     <p className="font-bold text-amber-950">{item.name}</p>
-                    <p className="text-[11px] text-amber-700">{item.idleHours} idle hrs • ${item.hourlyRate}/hr</p>
+                    <p className="text-[11px] text-amber-700">{item.idleHours} idle hrs • ₹{item.hourlyRate}/hr</p>
                   </div>
                   <span className="bg-amber-500 text-white font-bold px-2 py-0.5 rounded text-[11px]">
                     {item.utilizationPct}%
@@ -487,11 +487,11 @@ export default function Analytics() {
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <span className="text-gray-500">Gross Approved Bookings Value:</span>
-                    <p className="font-bold text-sm text-gray-800 mt-0.5">${totalRevenueIncurred.toLocaleString()}</p>
+                    <p className="font-bold text-sm text-gray-800 mt-0.5">₹{totalRevenueIncurred.toLocaleString()}</p>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <span className="text-gray-500">Cross-Institution Sharing Revenue:</span>
-                    <p className="font-bold text-sm text-purple-700 mt-0.5">${crossInstRevenue.toLocaleString()}</p>
+                    <p className="font-bold text-sm text-purple-700 mt-0.5">₹{crossInstRevenue.toLocaleString()}</p>
                   </div>
                   <div className="bg-gray-50 p-3 rounded-lg border border-gray-200">
                     <span className="text-gray-500">Total Idle Hours Identified:</span>

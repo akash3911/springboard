@@ -205,7 +205,7 @@ export default function Bookings() {
                   {isManager && <th className="px-4 py-3">Researcher / Student</th>}
                   <th className="px-4 py-3">Reservation Window</th>
                   <th className="px-4 py-3">Purpose</th>
-                  <th className="px-4 py-3">Cost ($)</th>
+                  <th className="px-4 py-3">Cost (₹)</th>
                   <th className="px-4 py-3">Access Type</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
@@ -241,7 +241,7 @@ export default function Bookings() {
                       {b.purpose || 'N/A'}
                     </td>
                     <td className="px-4 py-3 font-semibold text-gray-800">
-                      ${b.totalCost ? b.totalCost.toFixed(2) : '45.00'}
+                      ₹{b.totalCost ? b.totalCost.toFixed(2) : '450.00'}
                     </td>
                     <td className="px-4 py-3">
                       {b.isCrossInstitution ? (
@@ -378,7 +378,7 @@ export default function Bookings() {
             <div className="text-right">
               <span className="text-xs text-gray-500 uppercase font-semibold">Total Billable Value</span>
               <p className="text-xl font-extrabold text-emerald-700">
-                ${bookings.reduce((acc, curr) => acc + (curr.totalCost || 0), 0).toFixed(2)}
+                ₹{bookings.reduce((acc, curr) => acc + (curr.totalCost || 0), 0).toFixed(2)}
               </p>
             </div>
           </div>
@@ -390,7 +390,7 @@ export default function Bookings() {
                   <th className="px-4 py-3">Booking ID</th>
                   <th className="px-4 py-3">Equipment</th>
                   <th className="px-4 py-3">Researcher Institution</th>
-                  <th className="px-4 py-3">Total Cost</th>
+                  <th className="px-4 py-3">Total Cost (₹)</th>
                   <th className="px-4 py-3">Billing Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
@@ -407,7 +407,7 @@ export default function Bookings() {
                         <br />
                         <span className="text-gray-400">{b.user?.name}</span>
                       </td>
-                      <td className="px-4 py-3 font-extrabold text-gray-900">${(b.totalCost || 45.0).toFixed(2)}</td>
+                      <td className="px-4 py-3 font-extrabold text-gray-900">₹{(b.totalCost || 450.0).toFixed(2)}</td>
                       <td className="px-4 py-3">
                         <span className={`text-[11px] px-2.5 py-0.5 rounded-full ${billingStatusColors[billStatus] || 'bg-gray-100 text-gray-600'}`}>
                           {billStatus}

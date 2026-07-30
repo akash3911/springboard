@@ -31,10 +31,15 @@ export default function Notifications() {
 
   const loadData = async () => {
     try {
-      const res = await api.get('/notifications/my');
-      setNotifications(res.data || []);
-    } catch (err) {
-      toast.error('Failed to load notifications');
+      let res;
+      try {
+        res = await api.get('/notifications/my');
+      } catch {
+        res = await api.get('/notifications');
+      }
+      setNotifications(Array.isArray(res?.data) ? res.data : []);
+    } catch {
+      setNotifications([]);
     }
   };
 

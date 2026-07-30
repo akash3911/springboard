@@ -242,7 +242,7 @@ export default function Maintenance() {
                   <th className="px-4 py-3">Scheduled Date</th>
                   <th className="px-4 py-3">Description</th>
                   <th className="px-4 py-3">Assigned Tech</th>
-                  <th className="px-4 py-3">Cost ($)</th>
+                  <th className="px-4 py-3">Cost (₹)</th>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
@@ -271,7 +271,7 @@ export default function Maintenance() {
                       {m.technician?.name || m.technicianName || 'Unassigned'}
                     </td>
                     <td className="px-4 py-3 font-semibold text-gray-800">
-                      ${m.cost ? m.cost.toFixed(2) : '150.00'}
+                      ₹{m.cost ? m.cost.toFixed(2) : '1500.00'}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold ${statusColors[m.status] || 'bg-gray-100 text-gray-600'}`}>

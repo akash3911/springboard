@@ -20,7 +20,7 @@ public class NotificationController {
     private final NotificationService notificationService;
     private final UserService userService;
 
-    @GetMapping
+    @GetMapping({"", "/my"})
     public ResponseEntity<List<Notification>> getMyNotifications() {
         String email = SecurityContextHolder.getContext().getAuthentication().getName();
         User user = userService.findByEmail(email);
