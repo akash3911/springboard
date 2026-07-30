@@ -12,6 +12,7 @@ import com.labproject.repository.WaitlistRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -71,14 +72,33 @@ public class WaitlistService {
                 .orElseThrow(() -> new RuntimeException("Waitlist entry not found"));
 
         Equipment equipment = waitlist.getEquipment();
+        User user = waitlist.getUser();
+
+        LocalDateTime start = waitlist.getStartTime() != null ? waitlist.getStartTime() : LocalDateTime.now();
+        LocalDateTime end = waitlist.getEndTime() != null ? waitlist.getEndTime() : start.plusHours(2);
+
+        long minutes = Duration.between(start, end).toMinutes();
+        double hours = Math.max(0.5, minutes / 60.0);
+        double rate = equipment.getHourlyRate() != null ? equipment.getHourlyRate() : 45.0;
+        double totalCost = Math.round(hours * rate * 100.0) / 100.0;
+
+        Integer userInstId = user.getInstitution() != null ? user.getInstitution().getId() : 
+                            (user.getDepartment() != null && user.getDepartment().getInstitution() != null ? user.getDepartment().getInstitution().getId() : null);
+        Integer eqInstId = equipment.getDepartment() != null && equipment.getDepartment().getInstitution() != null ?
+                            equipment.getDepartment().getInstitution().getId() : null;
+
+        boolean isCross = userInstId != null && eqInstId != null && !userInstId.equals(eqInstId);
 
         Booking booking = new Booking();
         booking.setEquipment(equipment);
-        booking.setUser(waitlist.getUser());
-        booking.setStartTime(waitlist.getStartTime() != null ? waitlist.getStartTime() : LocalDateTime.now());
-        booking.setEndTime(waitlist.getEndTime() != null ? waitlist.getEndTime() : LocalDateTime.now().plusDays(1));
+        booking.setUser(user);
+        booking.setStartTime(start);
+        booking.setEndTime(end);
         booking.setPurpose("Promoted from Waitlist");
         booking.setStatus("APPROVED");
+        booking.setTotalCost(totalCost);
+        booking.setIsCrossInstitution(isCross);
+        booking.setBillingStatus("PENDING");
 
         Booking savedBooking = bookingRepository.save(booking);
 

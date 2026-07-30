@@ -347,7 +347,10 @@ export default function Dashboard() {
               </div>
               <div>
                 <p className="text-2xl font-extrabold text-gray-800">
-                  ₹{myBookings.reduce((acc, curr) => acc + (curr.totalCost || 0), 0).toFixed(2)}
+                  ₹{myBookings
+                    .filter((b) => b.status === 'APPROVED')
+                    .reduce((acc, curr) => acc + (curr.totalCost || 0), 0)
+                    .toFixed(2)}
                 </p>
                 <p className="text-xs text-gray-500 font-medium">Total Usage Cost</p>
               </div>
@@ -487,7 +490,21 @@ export default function Dashboard() {
                           <td className="px-3 py-2.5 text-gray-600">
                             {b.endTime ? new Date(b.endTime).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'N/A'}
                           </td>
-                          <td className="px-3 py-2.5 font-semibold text-gray-800">₹{(b.totalCost || 450.0).toFixed(2)}</td>
+                          <td className="px-3 py-2.5 text-xs">
+                            {b.status === 'APPROVED' && (
+                              <span className="font-semibold text-gray-800">₹{(b.totalCost || 450.0).toFixed(2)}</span>
+                            )}
+                            {b.status === 'PENDING' && (
+                              <span className="font-semibold text-amber-700" title="Estimated cost (Pending approval)">
+                                ₹{(b.totalCost || 450.0).toFixed(2)}*
+                              </span>
+                            )}
+                            {(b.status === 'CANCELLED' || b.status === 'REJECTED') && (
+                              <span className="line-through text-gray-400 font-normal">
+                                ₹{(b.totalCost || 450.0).toFixed(2)}
+                              </span>
+                            )}
+                          </td>
                           <td className="px-3 py-2.5">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${statusColors[b.status] || 'bg-gray-100 text-gray-600'}`}>
                               {b.status}
@@ -613,24 +630,7 @@ export default function Dashboard() {
 
         {/* Right 1 Col: Role-tailored Notifications & Action Shortcuts */}
         <div className="space-y-6">
-          {/* Quick Action Buttons */}
-          <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-            <h3 className="font-bold text-gray-800 text-sm mb-3">Quick Navigation</h3>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <Link to="/equipment" className="p-2.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-50 font-bold text-gray-700 text-center">
-                Equipment Catalog
-              </Link>
-              <Link to="/bookings" className="p-2.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-50 font-bold text-gray-700 text-center">
-                Reservations
-              </Link>
-              <Link to="/maintenance" className="p-2.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-50 font-bold text-gray-700 text-center">
-                Work Orders
-              </Link>
-              <Link to="/analytics" className="p-2.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-blue-50 font-bold text-gray-700 text-center">
-                Analytics
-              </Link>
-            </div>
-          </div>
+
 
           {/* Alert Feed Widget */}
           <div className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm">

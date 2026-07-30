@@ -46,6 +46,7 @@ export default function Notifications() {
   const handleMarkRead = async (id) => {
     try {
       await api.put(`/notifications/${id}/read`);
+      window.dispatchEvent(new Event('notificationUpdate'));
       loadData();
     } catch (err) {
       toast.error('Failed to mark as read');
@@ -55,6 +56,7 @@ export default function Notifications() {
   const handleMarkAllRead = async () => {
     try {
       await api.put('/notifications/read-all');
+      window.dispatchEvent(new Event('notificationUpdate'));
       toast.success('All notifications marked as read');
       loadData();
     } catch (err) {
