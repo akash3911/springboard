@@ -11,6 +11,7 @@ import {
   Landmark,
   BarChart3,
   ClipboardList,
+  Award,
 } from 'lucide-react';
 
 const allLinks = [
@@ -33,6 +34,12 @@ const allLinks = [
     label: 'Maintenance',
     icon: Wrench,
     roles: ['LAB_TECHNICIAN', 'LAB_MANAGER', 'SYSTEM_ADMIN'],
+  },
+  {
+    to: '/calibrations',
+    label: 'Calibrations & Certs',
+    icon: Award,
+    roles: ['LAB_TECHNICIAN', 'LAB_MANAGER', 'DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN'],
   },
   {
     to: '/analytics',

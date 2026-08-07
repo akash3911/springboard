@@ -13,6 +13,7 @@ import Departments from './pages/Departments';
 import Institutions from './pages/Institutions';
 import Notifications from './pages/Notifications';
 import Waitlist from './pages/Waitlist';
+import Calibrations from './pages/Calibrations';
 
 export default function App() {
   return (
@@ -50,8 +51,18 @@ export default function App() {
         <Route
           path="maintenance"
           element={
-            <ProtectedRoute allowedRoles={['LAB_TECHNICIAN', 'LAB_MANAGER']}>
+            <ProtectedRoute allowedRoles={['LAB_TECHNICIAN', 'LAB_MANAGER', 'SYSTEM_ADMIN']}>
               <Maintenance />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Calibrations & Certificate Renewals page - accessible to EHM roles */}
+        <Route
+          path="calibrations"
+          element={
+            <ProtectedRoute allowedRoles={['LAB_TECHNICIAN', 'LAB_MANAGER', 'DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN']}>
+              <Calibrations />
             </ProtectedRoute>
           }
         />
