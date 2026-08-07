@@ -329,21 +329,21 @@ Check rotary pump oil level and color monthly; change oil yearly.
 Replace sputter targets when copper backing layer is visible.'
 WHERE id = 14;
 
--- Seed Hourly Rates and Calibration Dates
-UPDATE equipment SET hourly_rate = 50.00, last_calibration_date = '2026-03-15', next_calibration_date = '2026-09-15', calibration_status = 'VALID' WHERE id = 1;
-UPDATE equipment SET hourly_rate = 35.00, last_calibration_date = '2026-04-10', next_calibration_date = '2026-10-10', calibration_status = 'VALID' WHERE id = 2;
-UPDATE equipment SET hourly_rate = 75.00, last_calibration_date = '2026-07-01', next_calibration_date = '2026-08-15', calibration_status = 'DUE_SOON' WHERE id = 3;
-UPDATE equipment SET hourly_rate = 90.00, last_calibration_date = '2026-01-20', next_calibration_date = '2026-07-20', calibration_status = 'EXPIRED' WHERE id = 4;
-UPDATE equipment SET hourly_rate = 40.00, last_calibration_date = '2026-05-15', next_calibration_date = '2026-11-15', calibration_status = 'VALID' WHERE id = 5;
-UPDATE equipment SET hourly_rate = 65.00, last_calibration_date = '2025-12-01', next_calibration_date = '2026-06-01', calibration_status = 'EXPIRED' WHERE id = 6;
-UPDATE equipment SET hourly_rate = 45.00, last_calibration_date = '2026-06-10', next_calibration_date = '2026-12-10', calibration_status = 'VALID' WHERE id = 7;
-UPDATE equipment SET hourly_rate = 120.00, last_calibration_date = '2026-07-05', next_calibration_date = '2026-08-05', calibration_status = 'DUE_SOON' WHERE id = 8;
-UPDATE equipment SET hourly_rate = 30.00, last_calibration_date = '2026-02-14', next_calibration_date = '2026-08-14', calibration_status = 'VALID' WHERE id = 9;
-UPDATE equipment SET hourly_rate = 150.00, last_calibration_date = '2026-06-01', next_calibration_date = '2026-12-01', calibration_status = 'VALID' WHERE id = 10;
-UPDATE equipment SET hourly_rate = 55.00, last_calibration_date = '2026-04-20', next_calibration_date = '2026-10-20', calibration_status = 'VALID' WHERE id = 11;
-UPDATE equipment SET hourly_rate = 60.00, last_calibration_date = '2026-05-01', next_calibration_date = '2026-11-01', calibration_status = 'VALID' WHERE id = 12;
-UPDATE equipment SET hourly_rate = 25.00, last_calibration_date = '2026-01-10', next_calibration_date = '2026-07-10', calibration_status = 'EXPIRED' WHERE id = 13;
-UPDATE equipment SET hourly_rate = 80.00, last_calibration_date = '2026-07-02', next_calibration_date = '2026-08-20', calibration_status = 'DUE_SOON' WHERE id = 14;
+-- Seed Hourly Rates, Calibration Dates, and Certificate Details
+UPDATE equipment SET hourly_rate = 50.00, last_calibration_date = '2026-03-15', next_calibration_date = '2026-09-15', calibration_status = 'VALID', certificate_number = 'CAL-2026-0101', certificate_agency = 'Prusa Metrology Services', certificate_type = '3D Printer Accuracy & Bed Leveling' WHERE id = 1;
+UPDATE equipment SET hourly_rate = 35.00, last_calibration_date = '2026-04-10', next_calibration_date = '2026-10-10', calibration_status = 'VALID', certificate_number = 'CERT-VR-8820', certificate_agency = 'Meta Optical Labs', certificate_type = 'Display Optics & Inertial Sensor Cert' WHERE id = 2;
+UPDATE equipment SET hourly_rate = 75.00, last_calibration_date = '2026-07-01', next_calibration_date = '2026-08-15', calibration_status = 'DUE_SOON', certificate_number = 'LAS-CERT-4412', certificate_agency = 'Thorlabs Precision Metrology', certificate_type = 'Class 3B Laser Safety & Wavelength' WHERE id = 3;
+UPDATE equipment SET hourly_rate = 90.00, last_calibration_date = '2026-01-20', next_calibration_date = '2026-07-20', calibration_status = 'EXPIRED', certificate_number = 'CRY-NIST-2026', certificate_agency = 'Oxford Cryo Standards', certificate_type = 'Thermal Sensor & Pressure Compliance' WHERE id = 4;
+UPDATE equipment SET hourly_rate = 40.00, last_calibration_date = '2026-05-15', next_calibration_date = '2026-11-15', calibration_status = 'VALID', certificate_number = 'PCR-BIO-7721', certificate_agency = 'Bio-Rad Global Certification', certificate_type = 'Thermal Cycler Ramp Rate & Uniformity' WHERE id = 5;
+UPDATE equipment SET hourly_rate = 65.00, last_calibration_date = '2025-12-01', next_calibration_date = '2026-06-01', calibration_status = 'EXPIRED', certificate_number = 'MIC-OPT-9923', certificate_agency = 'Nikon Metrology Bureau', certificate_type = 'Optical Alignment & Resolution Cert' WHERE id = 6;
+UPDATE equipment SET hourly_rate = 45.00, last_calibration_date = '2026-06-10', next_calibration_date = '2026-12-10', calibration_status = 'VALID', certificate_number = 'CEN-EPP-3341', certificate_agency = 'Eppendorf Service Inc', certificate_type = 'Rotor Speed & Temperature Calibration' WHERE id = 7;
+UPDATE equipment SET hourly_rate = 120.00, last_calibration_date = '2026-07-05', next_calibration_date = '2026-08-05', calibration_status = 'DUE_SOON', certificate_number = 'SEQ-ILL-1002', certificate_agency = 'Illumina Field Engineering', certificate_type = 'ISO 17025 Genetic Sequencer Cert' WHERE id = 8;
+UPDATE equipment SET hourly_rate = 30.00, last_calibration_date = '2026-02-14', next_calibration_date = '2026-08-14', calibration_status = 'VALID', certificate_number = 'AUT-TUT-8890', certificate_agency = 'National Safety Board', certificate_type = 'Pressure Vessel & Sterilization Cert' WHERE id = 9;
+UPDATE equipment SET hourly_rate = 150.00, last_calibration_date = '2026-06-01', next_calibration_date = '2026-12-01', calibration_status = 'VALID', certificate_number = 'GPU-NVD-5510', certificate_agency = 'NVIDIA Enterprise Services', certificate_type = 'Thermal & Compute Benchmark Cert' WHERE id = 10;
+UPDATE equipment SET hourly_rate = 55.00, last_calibration_date = '2026-04-20', next_calibration_date = '2026-10-20', calibration_status = 'VALID', certificate_number = 'OSC-TEK-9002', certificate_agency = 'Tektronix Calibration Lab', certificate_type = 'NIST Traceable Signal Accuracy' WHERE id = 11;
+UPDATE equipment SET hourly_rate = 60.00, last_calibration_date = '2026-05-01', next_calibration_date = '2026-11-01', calibration_status = 'VALID', certificate_number = 'CNC-SHP-1234', certificate_agency = 'ShopBot Industrial Metrology', certificate_type = 'Axis Alignment & Emergency Stop Cert' WHERE id = 12;
+UPDATE equipment SET hourly_rate = 25.00, last_calibration_date = '2026-01-10', next_calibration_date = '2026-07-10', calibration_status = 'EXPIRED', certificate_number = 'FUM-LAB-6654', certificate_agency = 'OSHA Environmental Safety', certificate_type = 'Face Velocity & Containment Safety Cert' WHERE id = 13;
+UPDATE equipment SET hourly_rate = 80.00, last_calibration_date = '2026-07-02', next_calibration_date = '2026-08-20', calibration_status = 'DUE_SOON', certificate_number = 'COA-CRE-7711', certificate_agency = 'Cressington Scientific', certificate_type = 'Thickness Monitor & Vacuum Pressure Cert' WHERE id = 14;
 
 -- Seed Booking Costs & Cross-Institution Flags
 UPDATE bookings SET total_cost = 150.00, is_cross_institution = FALSE, billing_status = 'PENDING' WHERE id = 1;

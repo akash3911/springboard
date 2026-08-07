@@ -79,4 +79,16 @@ public class Equipment {
 
     @Column(name = "calibration_status", length = 50)
     private String calibrationStatus = "VALID";
+
+    @Column(name = "certificate_number", length = 100)
+    private String certificateNumber;
+
+    @Column(name = "certificate_agency", length = 100)
+    private String certificateAgency;
+
+    @Column(name = "certificate_type", length = 100)
+    private String certificateType;
+
+    @Column(name = "certificate_url", columnDefinition = "TEXT")
+    private String certificateUrl;
 }

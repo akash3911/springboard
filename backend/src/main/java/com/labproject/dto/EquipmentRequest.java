@@ -27,4 +27,10 @@ public class EquipmentRequest {
     private LocalDate lastCalibrationDate;
     private LocalDate nextCalibrationDate;
     private String calibrationStatus;
+    private String certificateNumber;
+    private String certificateAgency;
+    private String certificateType;
+    private String certificateUrl;
+    private String notes;
+    private Double cost;
 }
