@@ -45,7 +45,7 @@ const allLinks = [
     to: '/analytics',
     label: 'Analytics',
     icon: BarChart3,
-    roles: ['DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN'],
+    roles: ['LAB_MANAGER', 'DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN'],
   },
   {
     to: '/users',

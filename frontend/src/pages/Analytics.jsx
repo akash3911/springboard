@@ -121,14 +121,22 @@ export default function Analytics() {
     return true;
   });
 
+  const scopedEquipmentIds = new Set(scopedEquipmentList.map((e) => e.id));
+
+  // Filter bookings based on selected timeframe and scoped equipment
+  const scopedBookings = filteredBookings.filter((b) => {
+    const eqId = b.equipment?.id || b.equipmentId;
+    return scopedEquipmentIds.has(eqId);
+  });
+
   // Metric Computations
   const totalEquipment = scopedEquipmentList.length;
-  const activeBookingsCount = filteredBookings.filter((b) => b.status === 'APPROVED').length;
-  const pendingBookingsCount = filteredBookings.filter((b) => b.status === 'PENDING').length;
+  const activeBookingsCount = scopedBookings.filter((b) => b.status === 'APPROVED').length;
+  const pendingBookingsCount = scopedBookings.filter((b) => b.status === 'PENDING').length;
 
   // Equipment Utilization calculation (% of approved booking hours)
   const equipmentUtilization = scopedEquipmentList.map((eq) => {
-    const eqBookings = filteredBookings.filter((b) => (b.equipment?.id === eq.id || b.equipmentId === eq.id) && b.status === 'APPROVED');
+    const eqBookings = scopedBookings.filter((b) => (b.equipment?.id === eq.id || b.equipmentId === eq.id) && b.status === 'APPROVED');
     let totalMinutes = 0;
     eqBookings.forEach((b) => {
       if (b.startTime && b.endTime) {
@@ -160,17 +168,17 @@ export default function Analytics() {
 
   const totalIdleHours = equipmentUtilization.reduce((acc, curr) => acc + curr.idleHours, 0);
 
-  // Billing and Revenue computations
-  const totalRevenueIncurred = filteredBookings
+  // Billing and Revenue computations (Scoped)
+  const totalRevenueIncurred = scopedBookings
     .filter((b) => b.status === 'APPROVED')
     .reduce((acc, curr) => acc + (curr.totalCost || 0), 0);
 
-  const crossInstRevenue = filteredBookings
+  const crossInstRevenue = scopedBookings
     .filter((b) => b.status === 'APPROVED' && b.isCrossInstitution)
     .reduce((acc, curr) => acc + (curr.totalCost || 0), 0);
 
-  // Calibration stats
-  const validCalibrationCount = equipmentList.filter((e) => !e.calibrationStatus || e.calibrationStatus === 'VALID').length;
+  // Calibration stats (Scoped)
+  const validCalibrationCount = scopedEquipmentList.filter((e) => !e.calibrationStatus || e.calibrationStatus === 'VALID').length;
   const calibrationComplianceRate = totalEquipment > 0 ? Math.round((validCalibrationCount / totalEquipment) * 100) : 100;
 
   // Demand Oversubscription Classification

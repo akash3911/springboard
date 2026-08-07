@@ -77,11 +77,11 @@ export default function App() {
           }
         />
 
-        {/* Analytics page - accessible to DEPARTMENT_HEAD, INSTITUTION_HEAD, SYSTEM_ADMIN */}
+        {/* Analytics page - accessible to LAB_MANAGER, DEPARTMENT_HEAD, INSTITUTION_HEAD, SYSTEM_ADMIN */}
         <Route
           path="analytics"
           element={
-            <ProtectedRoute allowedRoles={['DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN']}>
+            <ProtectedRoute allowedRoles={['LAB_MANAGER', 'DEPARTMENT_HEAD', 'INSTITUTION_HEAD', 'SYSTEM_ADMIN']}>
               <Analytics />
             </ProtectedRoute>
           }
