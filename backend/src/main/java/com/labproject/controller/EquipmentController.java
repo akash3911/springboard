@@ -28,8 +28,18 @@ public class EquipmentController {
         User currentUser = userService.findByEmail(email);
 
         List<Equipment> list;
-        if ("LAB_MANAGER".equals(currentUser.getRole())) {
-            // Lab Manager MUST ONLY see equipment belonging to their own lab/department
+        String role = currentUser.getRole();
+        if ("SYSTEM_ADMIN".equals(role)) {
+            list = equipmentService.findAll();
+        } else if ("INSTITUTION_HEAD".equals(role)) {
+            if (currentUser.getInstitution() != null) {
+                list = equipmentService.findByInstitutionId(currentUser.getInstitution().getId());
+            } else if (currentUser.getDepartment() != null && currentUser.getDepartment().getInstitution() != null) {
+                list = equipmentService.findByInstitutionId(currentUser.getDepartment().getInstitution().getId());
+            } else {
+                list = equipmentService.findAll();
+            }
+        } else if ("DEPARTMENT_HEAD".equals(role) || "LAB_MANAGER".equals(role) || "LAB_TECHNICIAN".equals(role)) {
             if (currentUser.getDepartment() != null) {
                 list = equipmentService.findByDepartmentId(currentUser.getDepartment().getId());
             } else {
@@ -83,6 +93,15 @@ public class EquipmentController {
     public ResponseEntity<Equipment> update(@PathVariable Integer id, @RequestBody EquipmentRequest request) {
         try {
             return ResponseEntity.ok(equipmentService.update(id, request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+
+    @PutMapping("/{id}/calibration")
+    public ResponseEntity<Equipment> recordCalibration(@PathVariable Integer id, @RequestBody EquipmentRequest request) {
+        try {
+            return ResponseEntity.ok(equipmentService.recordCalibration(id, request));
         } catch (Exception e) {
             return ResponseEntity.badRequest().build();
         }

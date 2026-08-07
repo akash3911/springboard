@@ -4,12 +4,15 @@ import com.labproject.dto.EquipmentRequest;
 import com.labproject.entity.Booking;
 import com.labproject.entity.Department;
 import com.labproject.entity.Equipment;
+import com.labproject.entity.Maintenance;
 import com.labproject.repository.BookingRepository;
 import com.labproject.repository.DepartmentRepository;
 import com.labproject.repository.EquipmentRepository;
+import com.labproject.repository.MaintenanceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -19,6 +22,7 @@ public class EquipmentService {
     private final EquipmentRepository equipmentRepository;
     private final DepartmentRepository departmentRepository;
     private final BookingRepository bookingRepository;
+    private final MaintenanceRepository maintenanceRepository;
 
     public List<Equipment> findAll() {
         return equipmentRepository.findAll().stream()
@@ -62,6 +66,50 @@ public class EquipmentService {
         return equipmentRepository.save(equipment);
     }
 
+    public Equipment recordCalibration(Integer id, EquipmentRequest request) {
+        Equipment equipment = findById(id);
+        
+        LocalDate lastCal = request.getLastCalibrationDate() != null ? request.getLastCalibrationDate() : LocalDate.now();
+        LocalDate nextCal = request.getNextCalibrationDate() != null ? request.getNextCalibrationDate() : lastCal.plusMonths(6);
+        String calStatus = request.getCalibrationStatus() != null ? request.getCalibrationStatus() : "VALID";
+
+        equipment.setLastCalibrationDate(lastCal);
+        equipment.setNextCalibrationDate(nextCal);
+        equipment.setCalibrationStatus(calStatus);
+        
+        if (request.getCertificateNumber() != null) equipment.setCertificateNumber(request.getCertificateNumber());
+        if (request.getCertificateAgency() != null) equipment.setCertificateAgency(request.getCertificateAgency());
+        if (request.getCertificateType() != null) equipment.setCertificateType(request.getCertificateType());
+        if (request.getCertificateUrl() != null) equipment.setCertificateUrl(request.getCertificateUrl());
+
+        // Restore equipment status to AVAILABLE if it was under maintenance
+        if ("UNDER_MAINTENANCE".equalsIgnoreCase(equipment.getStatus())) {
+            equipment.setStatus("AVAILABLE");
+        }
+
+        Equipment saved = equipmentRepository.save(equipment);
+
+        // Also create a completed Maintenance audit log for this calibration event
+        try {
+            Maintenance m = new Maintenance();
+            m.setEquipment(saved);
+            m.setMaintenanceDate(lastCal);
+            m.setNextDueDate(nextCal);
+            m.setMaintenanceType("CALIBRATION");
+            m.setStatus("COMPLETED");
+            m.setCost(request.getCost() != null ? request.getCost() : 250.0);
+            m.setWorkOrderNumber("CAL-" + System.currentTimeMillis() % 100000);
+            
+            String desc = "Calibration & Certificate Renewal: " + 
+                          (request.getCertificateNumber() != null ? request.getCertificateNumber() : "Certified") + 
+                          (request.getNotes() != null ? " - " + request.getNotes() : "");
+            m.setDescription(desc.substring(0, Math.min(desc.length(), 250)));
+            maintenanceRepository.save(m);
+        } catch (Exception ignored) {}
+
+        return saved;
+    }
+
     public void delete(Integer id) {
         equipmentRepository.deleteById(id);
     }
@@ -100,26 +148,30 @@ public class EquipmentService {
                     .orElseThrow(() -> new RuntimeException("Department not found"));
             equipment.setDepartment(dept);
         }
-        equipment.setName(request.getName());
-        equipment.setCategory(request.getCategory());
-        equipment.setManufacturer(request.getManufacturer());
-        equipment.setModel(request.getModel());
-        equipment.setSerialNumber(request.getSerialNumber());
-        equipment.setStatus(request.getStatus() != null ? request.getStatus() : "AVAILABLE");
-        equipment.setPurchaseDate(request.getPurchaseDate());
-        equipment.setIsShared(request.getIsShared() != null ? request.getIsShared() : false);
-        equipment.setIsRestricted(request.getIsRestricted() != null ? request.getIsRestricted() : false);
-        equipment.setRoomNumber(request.getRoomNumber());
-        equipment.setContactEmail(request.getContactEmail());
-        equipment.setImageUrl(request.getImageUrl());
-        equipment.setSpecifications(request.getSpecifications());
-        equipment.setDescription(request.getDescription());
-        equipment.setOperatingInstructions(request.getOperatingInstructions());
-        equipment.setSafetyGuidelines(request.getSafetyGuidelines());
-        equipment.setMaintenanceGuide(request.getMaintenanceGuide());
+        if (request.getName() != null) equipment.setName(request.getName());
+        if (request.getCategory() != null) equipment.setCategory(request.getCategory());
+        if (request.getManufacturer() != null) equipment.setManufacturer(request.getManufacturer());
+        if (request.getModel() != null) equipment.setModel(request.getModel());
+        if (request.getSerialNumber() != null) equipment.setSerialNumber(request.getSerialNumber());
+        if (request.getStatus() != null) equipment.setStatus(request.getStatus());
+        if (request.getPurchaseDate() != null) equipment.setPurchaseDate(request.getPurchaseDate());
+        if (request.getIsShared() != null) equipment.setIsShared(request.getIsShared());
+        if (request.getIsRestricted() != null) equipment.setIsRestricted(request.getIsRestricted());
+        if (request.getRoomNumber() != null) equipment.setRoomNumber(request.getRoomNumber());
+        if (request.getContactEmail() != null) equipment.setContactEmail(request.getContactEmail());
+        if (request.getImageUrl() != null) equipment.setImageUrl(request.getImageUrl());
+        if (request.getSpecifications() != null) equipment.setSpecifications(request.getSpecifications());
+        if (request.getDescription() != null) equipment.setDescription(request.getDescription());
+        if (request.getOperatingInstructions() != null) equipment.setOperatingInstructions(request.getOperatingInstructions());
+        if (request.getSafetyGuidelines() != null) equipment.setSafetyGuidelines(request.getSafetyGuidelines());
+        if (request.getMaintenanceGuide() != null) equipment.setMaintenanceGuide(request.getMaintenanceGuide());
         if (request.getHourlyRate() != null) equipment.setHourlyRate(request.getHourlyRate());
         if (request.getLastCalibrationDate() != null) equipment.setLastCalibrationDate(request.getLastCalibrationDate());
         if (request.getNextCalibrationDate() != null) equipment.setNextCalibrationDate(request.getNextCalibrationDate());
         if (request.getCalibrationStatus() != null) equipment.setCalibrationStatus(request.getCalibrationStatus());
+        if (request.getCertificateNumber() != null) equipment.setCertificateNumber(request.getCertificateNumber());
+        if (request.getCertificateAgency() != null) equipment.setCertificateAgency(request.getCertificateAgency());
+        if (request.getCertificateType() != null) equipment.setCertificateType(request.getCertificateType());
+        if (request.getCertificateUrl() != null) equipment.setCertificateUrl(request.getCertificateUrl());
     }
 }
