@@ -28,6 +28,7 @@ import {
   X,
   CheckCircle2,
   HelpCircle,
+  Calendar,
 } from 'lucide-react';
 
 const COLORS = ['#3b82f6', '#22c55e', '#eab308', '#ef4444', '#8b5cf6', '#ec4899'];
@@ -41,8 +42,11 @@ export default function Analytics() {
   const [maintenances, setMaintenances] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Perspective role filter
+  // Perspective role filter & Timeframe filter
   const [viewRole, setViewRole] = useState(user?.role || 'SYSTEM_ADMIN');
+  const [timeframe, setTimeframe] = useState('30_DAYS'); // '7_DAYS' | '30_DAYS' | '90_DAYS' | 'ALL_TIME'
+  const [heatmapTheme, setHeatmapTheme] = useState('THERMAL'); // 'THERMAL' | 'EMERALD'
+  const [chartShowAll, setChartShowAll] = useState(true); // Default to showing ALL equipment
   const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
@@ -68,14 +72,63 @@ export default function Analytics() {
     }
   };
 
+  // Timeframe baseline capacity hours & date filtering
+  const getTimeframeCapacity = () => {
+    switch (timeframe) {
+      case '7_DAYS': return 10;
+      case '30_DAYS': return 40;
+      case '90_DAYS': return 120;
+      case 'ALL_TIME': return 160;
+      default: return 40;
+    }
+  };
+
+  const baselineCapacityHours = getTimeframeCapacity();
+
+  // Filter bookings based on selected timeframe
+  const filteredBookings = bookings.filter((b) => {
+    if (!b.startTime) return true;
+    if (timeframe === 'ALL_TIME') return true;
+
+    const bookingDate = new Date(b.startTime);
+    const now = new Date();
+    const diffDays = (now - bookingDate) / (1000 * 60 * 60 * 24);
+
+    if (timeframe === '7_DAYS') return diffDays <= 7 && diffDays >= -7;
+    if (timeframe === '30_DAYS') return diffDays <= 30 && diffDays >= -30;
+    if (timeframe === '90_DAYS') return diffDays <= 90 && diffDays >= -90;
+    return true;
+  });
+
+  // Filter equipment list based on logged-in user role & perspective view
+  const scopedEquipmentList = equipmentList.filter((eq) => {
+    // SYSTEM_ADMIN sees ALL equipment
+    if (user?.role === 'SYSTEM_ADMIN' || viewRole === 'SYSTEM_ADMIN') {
+      return true;
+    }
+    // INSTITUTION_HEAD sees only equipment in their institution
+    if (user?.role === 'INSTITUTION_HEAD' || viewRole === 'INSTITUTION_HEAD') {
+      const userInstId = user?.institution?.id || user?.department?.institution?.id;
+      if (!userInstId) return true;
+      return eq.department?.institution?.id === userInstId;
+    }
+    // DEPARTMENT_HEAD / LAB_MANAGER / LAB_TECHNICIAN see equipment in their department
+    if (['DEPARTMENT_HEAD', 'LAB_MANAGER', 'LAB_TECHNICIAN'].includes(user?.role) || viewRole === 'LAB_MANAGER') {
+      const userDeptId = user?.department?.id;
+      if (!userDeptId) return true;
+      return eq.department?.id === userDeptId;
+    }
+    return true;
+  });
+
   // Metric Computations
-  const totalEquipment = equipmentList.length;
-  const activeBookingsCount = bookings.filter((b) => b.status === 'APPROVED').length;
-  const pendingBookingsCount = bookings.filter((b) => b.status === 'PENDING').length;
+  const totalEquipment = scopedEquipmentList.length;
+  const activeBookingsCount = filteredBookings.filter((b) => b.status === 'APPROVED').length;
+  const pendingBookingsCount = filteredBookings.filter((b) => b.status === 'PENDING').length;
 
   // Equipment Utilization calculation (% of approved booking hours)
-  const equipmentUtilization = equipmentList.map((eq) => {
-    const eqBookings = bookings.filter((b) => (b.equipment?.id === eq.id || b.equipmentId === eq.id) && b.status === 'APPROVED');
+  const equipmentUtilization = scopedEquipmentList.map((eq) => {
+    const eqBookings = filteredBookings.filter((b) => (b.equipment?.id === eq.id || b.equipmentId === eq.id) && b.status === 'APPROVED');
     let totalMinutes = 0;
     eqBookings.forEach((b) => {
       if (b.startTime && b.endTime) {
@@ -86,8 +139,7 @@ export default function Analytics() {
       }
     });
     const hoursBooked = Math.round((totalMinutes / 60) * 10) / 10;
-    // Assuming 168 available hours per month per equipment baseline
-    const utilPct = Math.min(100, Math.round((hoursBooked / 40) * 100));
+    const utilPct = Math.min(100, Math.round((hoursBooked / baselineCapacityHours) * 100));
     return {
       id: eq.id,
       name: eq.name,
@@ -95,7 +147,7 @@ export default function Analytics() {
       department: eq.department?.name || 'General',
       institution: eq.department?.institution?.name || 'Main Campus',
       hoursBooked,
-      idleHours: Math.max(0, 40 - hoursBooked),
+      idleHours: Math.max(0, baselineCapacityHours - hoursBooked),
       utilizationPct: utilPct,
       hourlyRate: eq.hourlyRate || 45.0,
       calibrationStatus: eq.calibrationStatus || 'VALID',
@@ -109,11 +161,11 @@ export default function Analytics() {
   const totalIdleHours = equipmentUtilization.reduce((acc, curr) => acc + curr.idleHours, 0);
 
   // Billing and Revenue computations
-  const totalRevenueIncurred = bookings
+  const totalRevenueIncurred = filteredBookings
     .filter((b) => b.status === 'APPROVED')
     .reduce((acc, curr) => acc + (curr.totalCost || 0), 0);
 
-  const crossInstRevenue = bookings
+  const crossInstRevenue = filteredBookings
     .filter((b) => b.status === 'APPROVED' && b.isCrossInstitution)
     .reduce((acc, curr) => acc + (curr.totalCost || 0), 0);
 
@@ -161,9 +213,9 @@ export default function Analytics() {
         <div>
           <div className="flex items-center gap-2">
             <h2 className="text-2xl font-bold text-gray-800">Resource Intelligence & Utilization Analytics</h2>
-            <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-blue-200 flex items-center gap-1">
+            {/* <span className="bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-blue-200 flex items-center gap-1">
               <Activity size={12} /> Real-Time Engine
-            </span>
+            </span> */}
           </div>
           <p className="text-xs text-gray-500 mt-1">
             Comprehensive equipment demand, idle detection, inter-institution billing, and compliance monitoring.
@@ -171,27 +223,32 @@ export default function Analytics() {
         </div>
 
         <div className="flex items-center gap-3 flex-wrap">
-          {/* View Perspective Selector */}
-          <div className="flex items-center bg-gray-100 p-1 rounded-lg border border-gray-200">
-            <button
-              onClick={() => setViewRole('STUDENT')}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                viewRole === 'STUDENT' || viewRole === 'RESEARCHER'
-                  ? 'bg-white text-gray-800 shadow-sm font-semibold'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+          {/* Timeframe Selector Dropdown */}
+          <div className="flex items-center gap-1.5 bg-gray-100 p-1 rounded-lg border border-gray-200 text-xs font-semibold">
+            <Calendar size={14} className="text-gray-500 ml-1.5" />
+            <select
+              value={timeframe}
+              onChange={(e) => setTimeframe(e.target.value)}
+              className="bg-white text-gray-800 py-1.5 px-2.5 rounded-md border border-gray-200 text-xs font-bold focus:outline-none cursor-pointer shadow-2xs"
             >
-              Researcher View
-            </button>
+              <option value="7_DAYS">Last 7 Days</option>
+              <option value="30_DAYS">Last 30 Days</option>
+              <option value="90_DAYS">Last 90 Days</option>
+              <option value="ALL_TIME">All Time</option>
+            </select>
+          </div>
+
+          {/* View Perspective Selector */}
+          {/* <div className="flex items-center bg-gray-100 p-1 rounded-lg border border-gray-200">
             <button
               onClick={() => setViewRole('LAB_MANAGER')}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${
-                viewRole === 'LAB_MANAGER'
+                viewRole === 'LAB_MANAGER' || viewRole === 'DEPARTMENT_HEAD'
                   ? 'bg-white text-gray-800 shadow-sm font-semibold'
                   : 'text-gray-600 hover:text-gray-900'
               }`}
             >
-              Lab Manager View
+              Lab Manager / Dept View
             </button>
             <button
               onClick={() => setViewRole('SYSTEM_ADMIN')}
@@ -203,9 +260,9 @@ export default function Analytics() {
             >
               Admin / Executive
             </button>
-          </div>
+          </div> */}
 
-          <button
+          {/* <button
             onClick={handleExportCSV}
             className="flex items-center gap-1.5 bg-gray-800 text-white px-3.5 py-2 rounded-lg text-xs font-semibold hover:bg-gray-700 transition-all cursor-pointer shadow-sm"
           >
@@ -218,7 +275,7 @@ export default function Analytics() {
           >
             <FileText size={14} />
             Summary Report
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -294,21 +351,47 @@ export default function Analytics() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Utilization Bar Chart (2 Cols) */}
         <div className="lg:col-span-2 bg-white border border-gray-200 rounded-xl p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
             <div>
               <h3 className="text-base font-bold text-gray-800">Equipment Utilization Rate (%)</h3>
               <p className="text-xs text-gray-500">Track total hours reserved against active baseline capacity</p>
             </div>
-            <span className="text-xs font-medium bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md border border-blue-100">
-              Top Equipment
-            </span>
+
+            {/* Toggle: All Equipment vs Top 8 */}
+            {/* <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-lg border border-gray-200 text-[10px]">
+              <button
+                type="button"
+                onClick={() => setChartShowAll(true)}
+                className={`px-2.5 py-1 rounded font-bold transition-all cursor-pointer ${
+                  chartShowAll ? 'bg-blue-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                All Equipment ({equipmentUtilization.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setChartShowAll(false)}
+                className={`px-2.5 py-1 rounded font-bold transition-all cursor-pointer ${
+                  !chartShowAll ? 'bg-blue-600 text-white shadow-2xs' : 'text-gray-600 hover:text-gray-900'
+                }`}
+              >
+                Top 8
+              </button>
+            </div> */}
           </div>
 
           {equipmentUtilization.length > 0 ? (
-            <ResponsiveContainer width="100%" height={320}>
-              <BarChart data={equipmentUtilization.slice(0, 8)}>
+            <ResponsiveContainer width="100%" height={350}>
+              <BarChart data={chartShowAll ? equipmentUtilization : equipmentUtilization.slice(0, 8)} margin={{ bottom: 35 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                <XAxis
+                  dataKey="name"
+                  tick={{ fontSize: 10, fill: '#475569' }}
+                  interval={0}
+                  angle={-25}
+                  textAnchor="end"
+                  height={65}
+                />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                 <Tooltip
                   formatter={(val) => [`${val}%`, 'Utilization']}
@@ -329,9 +412,28 @@ export default function Analytics() {
               <h3 className="text-base font-bold text-gray-800">Weekly Peak Load Heatmap</h3>
               <p className="text-xs text-gray-500">24x7 time-density allocation grid</p>
             </div>
-            <span className="text-[10px] font-semibold bg-amber-50 text-amber-700 px-2 py-0.5 rounded border border-amber-200">
-              Peak Detector
-            </span>
+            
+            {/* Heatmap Palette Switcher Toggle */}
+            <div className="flex items-center gap-1 bg-gray-100 p-0.5 rounded-lg border border-gray-200 text-[10px]">
+              <button
+                type="button"
+                onClick={() => setHeatmapTheme('THERMAL')}
+                className={`px-2 py-0.5 rounded font-bold transition-all cursor-pointer ${
+                  heatmapTheme === 'THERMAL' ? 'bg-white text-gray-800 shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                Thermal
+              </button>
+              <button
+                type="button"
+                onClick={() => setHeatmapTheme('EMERALD')}
+                className={`px-2 py-0.5 rounded font-bold transition-all cursor-pointer ${
+                  heatmapTheme === 'EMERALD' ? 'bg-emerald-600 text-white shadow-2xs' : 'text-gray-500 hover:text-gray-800'
+                }`}
+              >
+                Emerald
+              </button>
+            </div>
           </div>
 
           <div className="space-y-2 mt-2">
@@ -347,10 +449,17 @@ export default function Analytics() {
                 <span className="text-xs font-semibold text-gray-600">{row.day}</span>
                 {row.hours.map((col, idx) => {
                   let bg = 'bg-gray-100 text-gray-400';
-                  if (col.intensity > 75) bg = 'bg-red-500 text-white font-bold';
-                  else if (col.intensity > 50) bg = 'bg-amber-400 text-amber-950 font-bold';
-                  else if (col.intensity > 25) bg = 'bg-blue-400 text-white';
-                  else if (col.intensity > 10) bg = 'bg-blue-100 text-blue-700';
+                  if (heatmapTheme === 'EMERALD') {
+                    if (col.intensity > 75) bg = 'bg-emerald-800 text-white font-bold';
+                    else if (col.intensity > 50) bg = 'bg-emerald-600 text-white font-bold';
+                    else if (col.intensity > 25) bg = 'bg-emerald-400 text-emerald-950 font-bold';
+                    else if (col.intensity > 10) bg = 'bg-emerald-100 text-emerald-800';
+                  } else {
+                    if (col.intensity > 75) bg = 'bg-red-500 text-white font-bold';
+                    else if (col.intensity > 50) bg = 'bg-amber-400 text-amber-950 font-bold';
+                    else if (col.intensity > 25) bg = 'bg-blue-400 text-white';
+                    else if (col.intensity > 10) bg = 'bg-blue-100 text-blue-700';
+                  }
 
                   return (
                     <div
@@ -367,10 +476,21 @@ export default function Analytics() {
           </div>
 
           <div className="flex items-center justify-between text-[11px] text-gray-500 mt-5 pt-3 border-t border-gray-100">
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-gray-100 inline-block border"></span> Idle</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-blue-100 inline-block border"></span> Low</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-amber-400 inline-block"></span> Moderate</span>
-            <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-red-500 inline-block"></span> Peak</span>
+            {heatmapTheme === 'EMERALD' ? (
+              <>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-gray-100 inline-block border"></span> Idle</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-100 inline-block border"></span> Low</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-400 inline-block"></span> Moderate</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-emerald-800 inline-block"></span> Peak</span>
+              </>
+            ) : (
+              <>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-gray-100 inline-block border"></span> Idle</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-blue-100 inline-block border"></span> Low</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-amber-400 inline-block"></span> Moderate</span>
+                <span className="flex items-center gap-1"><span className="w-2.5 h-2.5 rounded bg-red-500 inline-block"></span> Peak</span>
+              </>
+            )}
           </div>
         </div>
       </div>
