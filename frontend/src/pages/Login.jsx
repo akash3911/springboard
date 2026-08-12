@@ -72,6 +72,26 @@ export default function Login() {
     }
   }, [googleClientId]);
 
+  const getErrorMessage = (err, defaultMsg) => {
+    if (!err) return defaultMsg;
+    const data = err.response?.data;
+    if (typeof data === 'string') {
+      if (data.includes('<!DOCTYPE html>') || data.includes('<html')) {
+        return 'Backend server API endpoint not found (404). Please verify VITE_API_BASE_URL environment variable in Vercel settings.';
+      }
+      return data;
+    }
+    if (data && typeof data === 'object') {
+      if (typeof data.error === 'string') return data.error;
+      if (typeof data.message === 'string') return data.message;
+      if (data.error && typeof data.error === 'object' && typeof data.error.message === 'string') {
+        return data.error.message;
+      }
+    }
+    if (typeof err.message === 'string') return err.message;
+    return defaultMsg;
+  };
+
   const handleGoogleCredentialResponse = async (response) => {
     if (!response?.credential) return;
     setLoading(true);
@@ -81,8 +101,7 @@ export default function Login() {
       navigate('/dashboard', { replace: true });
     } catch (err) {
       console.error('Google login error:', err);
-      const errMsg = err.response?.data?.error || 'Google login failed';
-      toast.error(errMsg);
+      toast.error(getErrorMessage(err, 'Google login failed'));
     } finally {
       setLoading(false);
     }
@@ -97,8 +116,7 @@ export default function Login() {
       navigate('/dashboard', { replace: true });
     } catch (err) {
       console.error('Login error:', err);
-      const errMsg = err.response?.data?.error || 'Invalid email or password';
-      toast.error(errMsg);
+      toast.error(getErrorMessage(err, 'Invalid email or password'));
     } finally {
       setLoading(false);
     }
