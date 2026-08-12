@@ -7,6 +7,8 @@ import com.labproject.entity.User;
 import com.labproject.repository.EquipmentRepository;
 import com.labproject.repository.MaintenanceRepository;
 import com.labproject.repository.UserRepository;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

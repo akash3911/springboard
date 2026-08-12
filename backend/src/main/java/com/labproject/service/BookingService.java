@@ -9,6 +9,8 @@ import com.labproject.repository.BookingRepository;
 import com.labproject.repository.EquipmentRepository;
 import com.labproject.repository.UserRepository;
 import com.labproject.repository.WaitlistRepository;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

@@ -4,6 +4,8 @@ import com.labproject.entity.Notification;
 import com.labproject.entity.User;
 import com.labproject.repository.NotificationRepository;
 import com.labproject.repository.UserRepository;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 

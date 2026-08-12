@@ -28,6 +28,16 @@ public class UserController {
         return null;
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<User> getCurrentUser() {
+        try {
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            return ResponseEntity.ok(userService.findByEmail(email));
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers(
             @RequestParam(required = false) String role) {
