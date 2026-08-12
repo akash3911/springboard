@@ -70,6 +70,72 @@ public class AuthService {
         return buildAuthResponse(user, token);
     }
 
+    public AuthResponse processGoogleLogin(Map<String, String> body) {
+        String email = body != null ? body.get("email") : null;
+        String name = body != null ? body.get("name") : null;
+        String credential = body != null ? body.get("credential") : null;
+
+        if (credential != null && !credential.trim().isEmpty()) {
+            try {
+                String[] parts = credential.split("\\.");
+                if (parts.length >= 2) {
+                    String payloadJson = new String(java.util.Base64.getUrlDecoder().decode(parts[1]), java.nio.charset.StandardCharsets.UTF_8);
+                    com.fasterxml.jackson.databind.ObjectMapper om = new com.fasterxml.jackson.databind.ObjectMapper();
+                    com.fasterxml.jackson.databind.JsonNode node = om.readTree(payloadJson);
+                    if (node.has("email")) {
+                        email = node.get("email").asText();
+                    }
+                    if (node.has("name")) {
+                        name = node.get("name").asText();
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        if (email == null || email.trim().isEmpty()) {
+            throw new RuntimeException("Google authentication failed: Email is required.");
+        }
+
+        return googleLogin(email, name, credential);
+    }
+
+    public AuthResponse googleLogin(String email, String name, String credentialToken) {
+        User user = userRepository.findByEmail(email).orElseGet(() -> {
+            Institution guestInst = institutionRepository.findAll().stream()
+                    .filter(i -> i.getName() != null && i.getName().equalsIgnoreCase("Guest University"))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        Institution inst = new Institution();
+                        inst.setName("Guest University");
+                        inst.setAddress("Guest Campus");
+                        return institutionRepository.save(inst);
+                    });
+
+            Department guestDept = departmentRepository.findByInstitutionId(guestInst.getId()).stream()
+                    .filter(d -> d.getName() != null && d.getName().equalsIgnoreCase("Guest Department"))
+                    .findFirst()
+                    .orElseGet(() -> {
+                        Department dept = new Department();
+                        dept.setName("Guest Department");
+                        dept.setInstitution(guestInst);
+                        return departmentRepository.save(dept);
+                    });
+
+            User newUser = new User();
+            newUser.setName(name != null && !name.trim().isEmpty() ? name : email.split("@")[0]);
+            newUser.setEmail(email);
+            newUser.setPassword(passwordEncoder.encode(java.util.UUID.randomUUID().toString()));
+            newUser.setRole("STUDENT");
+            newUser.setDepartment(guestDept);
+            newUser.setInstitution(guestInst);
+
+            return userRepository.save(newUser);
+        });
+
+        String token = jwtUtil.generateToken(user.getEmail());
+        return buildAuthResponse(user, token);
+    }
+
     private AuthResponse buildAuthResponse(User user, String token) {
         AuthResponse response = new AuthResponse();
         response.setToken(token);

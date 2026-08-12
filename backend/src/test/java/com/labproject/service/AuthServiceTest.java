@@ -21,6 +21,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.Collections;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -147,5 +148,51 @@ class AuthServiceTest {
 
         RuntimeException exception = assertThrows(RuntimeException.class, () -> authService.register(regRequest));
         assertEquals("Email already registered", exception.getMessage());
+    }
+
+    @Test
+    @DisplayName("googleLogin should return AuthResponse for existing Google user")
+    void testGoogleLogin_ExistingUser() {
+        when(userRepository.findByEmail("smith@tech.edu")).thenReturn(Optional.of(sampleUser));
+        when(jwtUtil.generateToken("smith@tech.edu")).thenReturn("google-jwt-token");
+
+        AuthResponse response = authService.googleLogin("smith@tech.edu", "Dr. Smith", null);
+
+        assertNotNull(response);
+        assertEquals("google-jwt-token", response.getToken());
+        assertEquals("smith@tech.edu", response.getEmail());
+    }
+
+    @Test
+    @DisplayName("googleLogin should auto-create Guest University user if account does not exist")
+    void testGoogleLogin_NewUserGuestUniversity() {
+        when(userRepository.findByEmail("new.google@user.org")).thenReturn(Optional.empty());
+        when(institutionRepository.findAll()).thenReturn(Collections.emptyList());
+        when(institutionRepository.save(any(Institution.class))).thenAnswer(i -> {
+            Institution inst = i.getArgument(0);
+            inst.setId(99);
+            return inst;
+        });
+        when(departmentRepository.findByInstitutionId(99)).thenReturn(Collections.emptyList());
+        when(departmentRepository.save(any(Department.class))).thenAnswer(i -> {
+            Department dept = i.getArgument(0);
+            dept.setId(999);
+            return dept;
+        });
+        when(passwordEncoder.encode(anyString())).thenReturn("randomEncodedPass");
+        when(userRepository.save(any(User.class))).thenAnswer(i -> {
+            User u = i.getArgument(0);
+            u.setId(202);
+            return u;
+        });
+        when(jwtUtil.generateToken("new.google@user.org")).thenReturn("google-guest-token");
+
+        AuthResponse response = authService.googleLogin("new.google@user.org", "Google New User", null);
+
+        assertNotNull(response);
+        assertEquals("google-guest-token", response.getToken());
+        assertEquals("new.google@user.org", response.getEmail());
+        assertEquals("STUDENT", response.getRole());
+        assertNotNull(response.getDepartment());
     }
 }

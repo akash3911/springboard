@@ -118,4 +118,29 @@ class AuthControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Email already registered"));
     }
+
+    @Test
+    @DisplayName("GET /api/auth/config should return googleClientId configuration")
+    void testGetConfig() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/api/auth/config"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.googleClientId").exists());
+    }
+
+    @Test
+    @DisplayName("POST /api/auth/google should process Google token and return AuthResponse")
+    void testGoogleLogin() throws Exception {
+        AuthResponse authResponse = new AuthResponse();
+        authResponse.setToken("google-token-xyz");
+        authResponse.setEmail("google.user@lab.org");
+
+        when(authService.processGoogleLogin(any())).thenReturn(authResponse);
+
+        mockMvc.perform(post("/api/auth/google")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(java.util.Map.of("email", "google.user@lab.org"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").value("google-token-xyz"))
+                .andExpect(jsonPath("$.email").value("google.user@lab.org"));
+    }
 }
