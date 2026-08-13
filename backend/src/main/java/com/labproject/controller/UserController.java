@@ -38,6 +38,25 @@ public class UserController {
         }
     }
 
+    @PutMapping("/me")
+    public ResponseEntity<?> updateMyProfile(@RequestBody Map<String, String> body) {
+        try {
+            String email = SecurityContextHolder.getContext().getAuthentication().getName();
+            User user = userService.findByEmail(email);
+
+            String name = body.get("name");
+            String newEmail = body.get("email");
+            String gmail = body.get("gmail");
+            String currentPassword = body.get("currentPassword");
+            String newPassword = body.get("newPassword");
+
+            User updated = userService.updateSelfProfile(user.getId(), name, newEmail, gmail, currentPassword, newPassword);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
     @GetMapping
     public ResponseEntity<List<User>> getAllUsers(
             @RequestParam(required = false) String role) {

@@ -9,6 +9,7 @@ public class AuthResponse {
     private Integer id;
     private String name;
     private String email;
+    private String gmail;
     private String role;
     private Map<String, Object> department;
 }

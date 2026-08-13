@@ -65,12 +65,16 @@ export default function Navbar() {
             </span>
           )}
         </Link>
-        <div className="text-sm text-gray-600">
-          <span className="font-medium text-gray-800">{user?.name}</span>
-          <span className="ml-2 text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded font-medium">
+        <Link
+          to="/profile"
+          className="flex items-center gap-2 text-sm text-gray-600 hover:text-blue-600 transition-colors py-1 px-2 rounded-lg hover:bg-gray-50"
+          title="View & Edit Profile"
+        >
+          <span className="font-medium text-gray-800 hover:text-blue-600">{user?.name}</span>
+          <span className="text-xs bg-blue-50 text-blue-700 border border-blue-100 px-2 py-0.5 rounded-full font-medium">
             {formatRole(user?.role)}
           </span>
-        </div>
+        </Link>
         <button
           onClick={handleLogout}
           className="flex items-center gap-1 text-sm text-gray-600 hover:text-red-600 cursor-pointer font-medium"

@@ -120,6 +120,37 @@ public class UserService {
         return userRepository.save(user);
     }
 
+    public User updateSelfProfile(Integer userId, String name, String newEmail, String gmail, String currentPassword, String newPassword) {
+        User user = findById(userId);
+
+        if (name != null && !name.trim().isEmpty()) {
+            user.setName(name.trim());
+        }
+
+        if (newEmail != null && !newEmail.trim().isEmpty() && !newEmail.equalsIgnoreCase(user.getEmail())) {
+            if (userRepository.findByEmail(newEmail.trim()).isPresent()) {
+                throw new RuntimeException("Email address is already registered");
+            }
+            user.setEmail(newEmail.trim());
+        }
+
+        if (gmail != null) {
+            user.setGmail(gmail.trim().isEmpty() ? null : gmail.trim());
+        }
+
+        if (newPassword != null && !newPassword.trim().isEmpty()) {
+            if (currentPassword == null || currentPassword.isEmpty()) {
+                throw new RuntimeException("Current password is required to set a new password");
+            }
+            if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+                throw new RuntimeException("Current password is incorrect");
+            }
+            user.setPassword(passwordEncoder.encode(newPassword.trim()));
+        }
+
+        return userRepository.save(user);
+    }
+
     public void delete(Integer id) {
         userRepository.deleteById(id);
     }

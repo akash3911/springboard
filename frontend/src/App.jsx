@@ -14,6 +14,7 @@ import Institutions from './pages/Institutions';
 import Notifications from './pages/Notifications';
 import Waitlist from './pages/Waitlist';
 import Calibrations from './pages/Calibrations';
+import Profile from './pages/Profile';
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
       >
         <Route index element={<Navigate to="/dashboard" replace />} />
         <Route path="dashboard" element={<Dashboard />} />
+        <Route path="profile" element={<Profile />} />
         <Route path="equipment" element={<Equipment />} />
         <Route path="equipment/:id" element={<EquipmentDetail />} />
         <Route path="bookings" element={<Bookings />} />

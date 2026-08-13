@@ -22,6 +22,7 @@ export function AuthProvider({ children }) {
       id: data.id,
       name: data.name,
       email: data.email,
+      gmail: data.gmail,
       role: data.role,
       department: data.department
         ? {
@@ -49,6 +50,7 @@ export function AuthProvider({ children }) {
       id: data.id,
       name: data.name,
       email: data.email,
+      gmail: data.gmail,
       role: data.role,
       department: data.department
         ? {
@@ -74,6 +76,14 @@ export function AuthProvider({ children }) {
     return res.data;
   };
 
+  const updateUser = (updatedFields) => {
+    setUser((prev) => {
+      const nextUser = { ...prev, ...updatedFields };
+      localStorage.setItem('user', JSON.stringify(nextUser));
+      return nextUser;
+    });
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -81,7 +91,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, googleLogin, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, googleLogin, register, updateUser, logout }}>
       {children}
     </AuthContext.Provider>
   );

@@ -12,10 +12,12 @@ import {
   BarChart3,
   ClipboardList,
   Award,
+  User,
 } from 'lucide-react';
 
 const allLinks = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: 'ALL' },
+  { to: '/profile', label: 'My Profile', icon: User, roles: 'ALL' },
   { to: '/equipment', label: 'Equipment', icon: Monitor, roles: 'ALL' },
   {
     to: '/bookings',

@@ -142,6 +142,7 @@ public class AuthService {
         response.setId(user.getId());
         response.setName(user.getName());
         response.setEmail(user.getEmail());
+        response.setGmail(user.getGmail());
         response.setRole(user.getRole());
 
         if (user.getDepartment() != null) {

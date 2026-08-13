@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS users (
     institution_id INTEGER REFERENCES institutions(id) ON DELETE SET NULL,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
+    gmail VARCHAR(150),
     password VARCHAR(255) NOT NULL,
     role VARCHAR(50) NOT NULL
 );
