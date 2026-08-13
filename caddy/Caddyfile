@@ -1,0 +1,33 @@
+# Caddyfile for Springboard (Lab Resource Utilization Platform)
+# Copy to /etc/caddy/Caddyfile on your Azure VM
+
+# Replace 'yourdomain.com' with your actual domain name or public IP
+# Caddy automatically provisions and renews SSL (HTTPS) for domains!
+
+yourdomain.com {
+    # Enable compression (gzip & zstd)
+    encode zstd gzip
+
+    # Log requests
+    log {
+        output file /var/log/caddy/springboard_access.log
+    }
+
+    # 1. Reverse proxy API calls to Spring Boot backend
+    handle /api/* {
+        reverse_proxy 127.0.0.1:8080
+    }
+
+    # 2. Reverse proxy frontend (Option A: running Vite/Node server)
+    handle {
+        reverse_proxy 127.0.0.1:5173
+    }
+
+    # Option B: Serve built React static files directly (SPA routing)
+    # (Uncomment this section and comment Option A if serving built 'dist' files directly)
+    # handle {
+    #     root * /var/www/springboard/frontend/dist
+    #     file_server
+    #     try_files {path} /index.html
+    # }
+}
