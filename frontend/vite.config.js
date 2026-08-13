@@ -9,6 +9,7 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true, // Listen on all network interfaces for Docker container access
       port: 5173,
+      allowedHosts: true, // Allow all host headers (custom domains/subdomains via proxy)
       proxy: {
         '/api': env.BACKEND_URL || 'http://localhost:8080'
       }
