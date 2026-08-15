@@ -35,3 +35,4 @@ Thumbs.db
 *.sw?
 .idea/
 *.log
+/backend/.env
